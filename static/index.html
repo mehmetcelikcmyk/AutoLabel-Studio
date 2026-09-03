@@ -1,0 +1,3138 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YOLO Editor — AI Dataset Labeling Platform</title>
+  <meta name="description"
+    content="YOLOWorld destekli, profesyonel AI veri seti etiketleme ve otomatik labeling platformu. Hızlı, ücretsiz, yerel.">
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="shortcut icon" type="image/png" href="/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=2.5.6">
+</head>
+
+
+
+
+
+
+
+
+
+
+
+
+<body>
+
+  <!-- ===================================================== -->
+  <!-- 0. LANDING PAGE (Marketing / Demo Ekranı)             -->
+  <!-- ===================================================== -->
+  <div id="landingView" class="view-screen landing-view" style="display:none; overflow-y:auto; height:100vh;">
+
+    <!-- NAVBAR -->
+    <nav class="landing-nav">
+      <div class="landing-nav-inner">
+        <div class="landing-brand">
+          <img src="/logo.png" alt="YOLO Editor" class="landing-brand-logo">
+          <span class="landing-brand-name">YOLO<span class="landing-brand-accent">Editor</span></span>
+        </div>
+        <div class="landing-nav-links">
+          <a href="#features" class="landing-nav-link">Özellikler</a>
+          <a href="#how-it-works" class="landing-nav-link">Nasıl Çalışır</a>
+          <a href="#use-cases" class="landing-nav-link">Kullanım Alanları</a>
+          <a href="#pricing" class="landing-nav-link">Fiyatlandırma</a>
+        </div>
+        <div class="landing-nav-cta">
+          <button class="btn-landing-ghost" id="landingSignInBtn">Giriş Yap</button>
+          <button class="btn-landing-primary" id="landingGetStartedBtn">Ücretsiz Başla →</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="landing-hero" id="hero">
+      <div class="hero-bg-grid"></div>
+      <div class="hero-bg-glow hero-glow-1"></div>
+      <div class="hero-bg-glow hero-glow-2"></div>
+      <div class="landing-hero-inner">
+        <div class="hero-badge-row">
+          <span class="hero-badge">YOLOWorld v2 Destekli</span>
+          <span class="hero-badge hero-badge-new">Yeni: Görsel Sınıflandırma Modu</span>
+        </div>
+        <h1 class="hero-title">
+          AI ile <span class="hero-title-gradient">Etiketle</span>,<br>
+          Daha Hızlı <span class="hero-title-gradient">Eğit</span>
+        </h1>
+        <p class="hero-subtitle">
+          Bilgisayarlı görü modelleriniz için veri setlerini dakikalar içinde hazırlayın.<br>
+          YOLOWorld AI motoru ile otomatik tespit, toplu etiketleme ve anında dışa aktarma.
+        </p>
+        <div class="hero-cta-row">
+          <button class="btn-hero-primary" id="heroGetStartedBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Ücretsiz Başla
+          </button>
+          <button class="btn-hero-secondary" id="heroWatchDemoBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polygon points="10 8 16 12 10 16 10 8"></polygon>
+            </svg>
+            Demo İzle
+          </button>
+        </div>
+        <div class="hero-trust-row">
+          <span class="hero-trust-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Tamamen ücretsiz
+          </span>
+          <span class="hero-trust-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Yerel çalışır, internet gerektirmez
+          </span>
+          <span class="hero-trust-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Verileriniz yalnızca sizde
+          </span>
+        </div>
+      </div>
+
+      <!-- HERO DEMO MOCKUP (Antigravity Ultra-Smooth Floating AI Canvas) -->
+      <div class="hero-demo-mockup">
+        <div class="demo-window antigravity-floating">
+          <div class="demo-window-bar">
+            <div class="demo-dots-group">
+              <span class="demo-dot" style="background:#ef4444;"></span>
+              <span class="demo-dot" style="background:#f59e0b;"></span>
+              <span class="demo-dot" style="background:#10b981;"></span>
+            </div>
+            <div class="demo-window-title-tab">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="21 15 16 10 5 21"></polyline></svg>
+              <span>workspace / production_dataset_v2.mp4</span>
+            </div>
+            <div class="demo-window-status-pill">
+              <span class="antigravity-pulse-dot"></span>
+              <span>YOLO World Engine Online</span>
+            </div>
+          </div>
+          <div class="demo-window-content">
+            <div class="demo-sidebar">
+              <div class="demo-sidebar-item active">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                <span>Projeler</span>
+              </div>
+              <div class="demo-sidebar-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                <span>Etiketleme</span>
+              </div>
+              <div class="demo-sidebar-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                <span>Veri Seti</span>
+              </div>
+              <div class="demo-sidebar-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span>Ayarlar</span>
+              </div>
+            </div>
+            <div class="demo-canvas-area">
+              <div class="demo-canvas-img">
+                <!-- Laser Scanning Beam Animation -->
+                <div class="laser-scanner-beam"></div>
+                <div class="laser-grid-mesh"></div>
+
+                <!-- Interactive Floating Bounding Boxes -->
+                <div class="demo-bbox bbox-person" style="left:12%;top:18%;width:34%;height:52%;border-color:#3b82f6;">
+                  <div class="demo-bbox-corner tl"></div>
+                  <div class="demo-bbox-corner tr"></div>
+                  <div class="demo-bbox-corner bl"></div>
+                  <div class="demo-bbox-corner br"></div>
+                  <span class="demo-bbox-label" style="background:#3b82f6;">Person 98.4%</span>
+                </div>
+                <div class="demo-bbox bbox-car" style="left:52%;top:32%;width:32%;height:40%;border-color:#10b981;">
+                  <div class="demo-bbox-corner tl"></div>
+                  <div class="demo-bbox-corner tr"></div>
+                  <div class="demo-bbox-corner bl"></div>
+                  <div class="demo-bbox-corner br"></div>
+                  <span class="demo-bbox-label" style="background:#10b981;">Vehicle 95.1%</span>
+                </div>
+                <div class="demo-bbox bbox-helmet" style="left:68%;top:14%;width:18%;height:22%;border-color:#f59e0b;">
+                  <div class="demo-bbox-corner tl"></div>
+                  <div class="demo-bbox-corner tr"></div>
+                  <div class="demo-bbox-corner bl"></div>
+                  <div class="demo-bbox-corner br"></div>
+                  <span class="demo-bbox-label" style="background:#f59e0b;">Hardhat 89.7%</span>
+                </div>
+
+                <!-- Floating Telemetry HUD -->
+                <div class="demo-telemetry-hud">
+                  <div class="hud-item"><span>FPS:</span> <strong>60.0</strong></div>
+                  <div class="hud-item"><span>INFERENCE:</span> <strong>4.2ms</strong></div>
+                  <div class="hud-item"><span>CONFIDENCE:</span> <strong>&gt;0.85</strong></div>
+                </div>
+              </div>
+              <div class="demo-ai-badge">
+                <span class="demo-ai-pulse"></span>
+                <span>Canlı AI Tahmin &amp; Otomatik Etiketleme</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATS SECTION -->
+    <section class="landing-stats">
+      <div class="landing-section-inner">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" data-target="50000">0</div>
+            <div class="stat-label">Etiket Kapasitesi (Görüntü)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" data-target="15" data-suffix="x">0x</div>
+            <div class="stat-label">AI ile Manuel'den Daha Hızlı</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" data-target="5" data-prefix="">5</div>
+            <div class="stat-label">Dışa Aktarma Formatı</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" data-target="99" data-suffix="%">99%</div>
+            <div class="stat-label">Yerel Gizlilik Güvencesi</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES SECTION -->
+    <section class="landing-features" id="features">
+      <div class="landing-section-inner">
+        <div class="landing-section-badge">Özellikler</div>
+        <h2 class="landing-section-title">Her şey dahil,<br><span class="text-gradient">sıfır kurulum</span></h2>
+        <p class="landing-section-sub">Profesyonel veri seti pipeline'ı için ihtiyacınız olan her araç tek platformda.
+        </p>
+
+        <div class="features-grid">
+          <div class="feature-card feature-card-primary">
+            <div class="feature-card-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+            </div>
+            <h3>YOLOWorld AI Otomatik Etiketleme</h3>
+            <p>Doğal dil promptları ile herhangi bir nesneyi tanıyın. "araba, insan, köpek" yazın — AI saniyeler içinde
+              tüm görüntüleri etiketlesin.</p>
+            <div class="feature-tags">
+              <span>YOLOv8</span><span>Zero-shot</span><span>Real-time</span>
+            </div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path></svg>
+            </div>
+            <h3>Toplu Etiketleme</h3>
+            <p>Yüzlerce görüntüyü tek seferde işleyin. Güven eşiği ayarlayın, üzerine yazma seçeneği ile hassas kontrol
+              sağlayın.</p>
+            <div class="feature-tags"><span>Batch</span><span>Background</span></div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+            </div>
+            <h3>Manuel & AI Hibrit Etiketleme</h3>
+            <p>Bounding box çizin, sürükleyin, boyutlandırın. Ctrl+Z/Y ile tam undo/redo desteği. Klavye kısayolları ile
+              hız kazanın.</p>
+            <div class="feature-tags"><span>Canvas</span><span>Keyboard shortcuts</span></div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <h3>Proje Yönetimi</h3>
+            <p>Her proje için ayrı sınıf tanımları, AI prompts, model seçimi ve gizlilik ayarı. Roboflow tarzı proje
+              hub'ı.</p>
+            <div class="feature-tags"><span>Multi-project</span><span>Hub</span></div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            </div>
+            <h3>Veri Seti Yönetimi</h3>
+            <p>Gallery görünümü, filter ve arama. Train/Val split ile ZIP paketleme. data.yaml otomatik üretimi.</p>
+            <div class="feature-tags"><span>Train/Val</span><span>ZIP Export</span></div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </div>
+            <h3>Benzer Görüntü Arama</h3>
+            <p>ORB, HOG ve template matching yöntemleri ile bir nesnenin benzerini tüm veri setinde arayın.</p>
+            <div class="feature-tags"><span>ORB</span><span>HOG</span><span>Matching</span></div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+            </div>
+            <h3>Classification Modu</h3>
+            <p>Bounding box yerine görüntü düzeyinde sınıf ataması. ImageFolder formatı ile CNN modellerinizi
+              hazırlayın.</p>
+            <div class="feature-tags"><span>Image-level</span><span>CNN</span></div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </div>
+            <h3>Tam Yerel Gizlilik</h3>
+            <p>Verileriniz asla internete çıkmaz. Tamamen yerel çalışır. Public/Private proje ayarı ile ekip erişim
+              kontrolü.</p>
+            <div class="feature-tags"><span>Local</span><span>Private</span><span>Secure</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="landing-how" id="how-it-works">
+      <div class="landing-section-inner">
+        <div class="landing-section-badge">Nasıl Çalışır</div>
+        <h2 class="landing-section-title">4 adımda <span class="text-gradient">eğitime hazır</span> veri seti</h2>
+        <div class="how-steps">
+          <div class="how-step">
+            <div class="how-step-number">01</div>
+            <div class="how-step-content">
+              <h3>Proje Oluştur</h3>
+              <p>Proje adı, sınıflar ve AI promptlarını girin. Object Detection veya Classification modunu seçin.
+                Public/Private görünürlük ayarlayın.</p>
+            </div>
+          </div>
+          <div class="how-step-arrow">→</div>
+          <div class="how-step">
+            <div class="how-step-number">02</div>
+            <div class="how-step-content">
+              <h3>Görüntü Yükle</h3>
+              <p>Sürükle-bırak ile tek tek veya klasör olarak yükleyin. JPG, PNG, WebP, BMP desteklenir. 150 dosyaya
+                kadar tek seferde.</p>
+            </div>
+          </div>
+          <div class="how-step-arrow">→</div>
+          <div class="how-step">
+            <div class="how-step-number">03</div>
+            <div class="how-step-content">
+              <h3>AI ile Etiketle</h3>
+              <p>Tek tıkla tüm veri setini otomatik etiketleyin. Güven eşiğini ayarlayın. Manuel düzenleme ile hataları
+                düzeltin.</p>
+            </div>
+          </div>
+          <div class="how-step-arrow">→</div>
+          <div class="how-step">
+            <div class="how-step-number">04</div>
+            <div class="how-step-content">
+              <h3>Dışa Aktar</h3>
+              <p>Train/Val split oranını seçin. YOLO formatında ZIP indirin. data.yaml otomatik oluşturulur. YOLOv8/v11
+                ile anında eğitime başlayın.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- USE CASES -->
+    <section class="landing-usecases" id="use-cases">
+      <div class="landing-section-inner">
+        <div class="landing-section-badge">Kullanım Alanları</div>
+        <h2 class="landing-section-title">Her sektörde <span class="text-gradient">bilgisayarlı görü</span></h2>
+        <div class="usecases-grid">
+          <div class="usecase-card">
+            <div class="usecase-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 20h20"></path><path d="M5 20V8l5 4V8l5 4V4h5v16"></path></svg>
+            </div>
+            <h3>Fabrika & Kalite Kontrol</h3>
+            <p>Üretim hattındaki defektleri, yanlış montajları ve kalite sorunlarını tespit edin. Gerçek zamanlı hata
+              sınıflandırması.</p>
+            <div class="usecase-tags"><span>Defect Detection</span><span>Quality</span></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12A10 10 0 0 1 12 2z"></path><path d="M12 6v12"></path><path d="M8 10l4-4 4 4"></path></svg>
+            </div>
+            <h3>Tarım & Drone</h3>
+            <p>Bitki hastalıklarını, hasat olgunluğunu ve tarla sorunlarını drone görüntülerinden otomatik tespit edin.
+            </p>
+            <div class="usecase-tags"><span>Crop Detection</span><span>UAV</span></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+            </div>
+            <h3>Tıbbi Görüntüleme</h3>
+            <p>X-ray, MRI ve patoloji görüntülerinde anomali segmentasyonu için etiketli veri seti oluşturun.</p>
+            <div class="usecase-tags"><span>Medical</span><span>Segmentation</span></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+            </div>
+            <h3>Otonom Araç</h3>
+            <p>Trafik işaretleri, yayalar, araçlar ve yol engelleri için kapsamlı nesne tespit veri setleri.</p>
+            <div class="usecase-tags"><span>Object Detection</span><span>Tracking</span></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+            </div>
+            <h3>Perakende & E-Ticaret</h3>
+            <p>Raf doluluk analizi, ürün tanıma ve müşteri davranış analizi için görüntü sınıflandırma.</p>
+            <div class="usecase-tags"><span>Classification</span><span>Retail</span></div>
+          </div>
+          <div class="usecase-card">
+            <div class="usecase-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.31"></path><path d="M14 9.3V1.99"></path><path d="M8.5 2h7"></path><path d="M14 9.3a6.5 6.5 0 1 1-4 0"></path><path d="M5.52 16h12.96"></path></svg>
+            </div>
+            <h3>Araştırma & Akademi</h3>
+            <p>Hızlı prototipleme, benchmark veri seti oluşturma ve model karşılaştırma için ideal ortam.</p>
+            <div class="usecase-tags"><span>Research</span><span>Benchmark</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURE SHOWCASE (Alternating) -->
+    <section class="landing-showcase">
+      <div class="landing-section-inner">
+        <div class="showcase-row">
+          <div class="showcase-text">
+            <div class="landing-section-badge">AI Motor</div>
+            <h2>YOLOWorld ile <span class="text-gradient">sıfır-shot tespit</span></h2>
+            <p>Önceden eğitilmiş herhangi bir sınıf için model fine-tune etmenize gerek yok. Sadece ne aradığınızı
+              yazın.</p>
+            <ul class="showcase-list">
+              <li><span class="check-icon">✓</span> Doğal dil promptları ile nesne tanıma</li>
+              <li><span class="check-icon">✓</span> Güven eşiği ve IoU ayarları</li>
+              <li><span class="check-icon">✓</span> Soft-NMS ile örtüşme kontrolü</li>
+              <li><span class="check-icon">✓</span> GPU/CPU otomatik seçimi</li>
+            </ul>
+          </div>
+          <div class="showcase-visual">
+            <div class="showcase-code-block">
+              <div class="code-line"><span class="code-comment"># Prompt tabanlı tespit</span></div>
+              <div class="code-line"><span class="code-keyword">prompts</span> = [<span class="code-str">"araba"</span>,
+                <span class="code-str">"insan"</span>, <span class="code-str">"köpek"</span>]</div>
+              <div class="code-line"><span class="code-keyword">model</span> = <span
+                  class="code-fn">YOLOWorld</span>(<span class="code-str">"yolov8s-worldv2"</span>)</div>
+              <div class="code-line"><span class="code-keyword">results</span> = model.<span
+                  class="code-fn">predict</span>(image)</div>
+              <div class="code-line code-output"><span class="code-comment"># ✓ 3 araba, 7 insan tespit edildi</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="showcase-row showcase-row-reverse">
+          <div class="showcase-text">
+            <div class="landing-section-badge">Veri Seti</div>
+            <h2>Train/Val split ile <span class="text-gradient">anında dışa aktarma</span></h2>
+            <p>Eğitim sürecinizi hızlandırmak için veri setinizi otomatik bölerek YOLO formatında paketleyin.</p>
+            <ul class="showcase-list">
+              <li><span class="check-icon">✓</span> Özelleştirilebilir train/val oranı</li>
+              <li><span class="check-icon">✓</span> Otomatik data.yaml üretimi</li>
+              <li><span class="check-icon">✓</span> YOLOv5/v8/v11 uyumlu format</li>
+              <li><span class="check-icon">✓</span> Tek ZIP dosyası ile tam paket</li>
+            </ul>
+          </div>
+          <div class="showcase-visual">
+            <div class="showcase-file-tree">
+              <div class="file-tree-item">dataset_export.zip</div>
+              <div class="file-tree-item file-tree-indent">images/</div>
+              <div class="file-tree-item file-tree-indent2">train/ <span class="file-count">640 img</span></div>
+              <div class="file-tree-item file-tree-indent2">val/ <span class="file-count">160 img</span></div>
+              <div class="file-tree-item file-tree-indent">labels/</div>
+              <div class="file-tree-item file-tree-indent2">train/ <span class="file-count">.txt</span></div>
+              <div class="file-tree-item file-tree-indent2">val/ <span class="file-count">.txt</span></div>
+              <div class="file-tree-item file-tree-indent">data.yaml <span class="file-count">auto</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRICING -->
+    <section class="landing-pricing" id="pricing">
+      <div class="landing-section-inner">
+        <div class="landing-section-badge">Fiyatlandırma</div>
+        <h2 class="landing-section-title">Tamamen <span class="text-gradient">ücretsiz</span> ve açık</h2>
+        <p class="landing-section-sub">Sınırsız proje, sınırsız görüntü, sınırsız sınıf. Kredi kartı gerekmez.</p>
+        <div class="pricing-card-single">
+          <div class="pricing-free-badge">Ücretsiz</div>
+          <h3>Tüm Özellikler Dahil</h3>
+          <div class="pricing-features-list">
+            <div class="pricing-feat"><span>✓</span> Sınırsız proje ve görüntü</div>
+            <div class="pricing-feat"><span>✓</span> YOLOWorld AI otomatik etiketleme</div>
+            <div class="pricing-feat"><span>✓</span> Object Detection + Classification</div>
+            <div class="pricing-feat"><span>✓</span> Toplu etiketleme</div>
+            <div class="pricing-feat"><span>✓</span> Train/Val ZIP export</div>
+            <div class="pricing-feat"><span>✓</span> Tam yerel gizlilik</div>
+            <div class="pricing-feat"><span>✓</span> GPU/CPU destek</div>
+            <div class="pricing-feat"><span>✓</span> Kullanıcı hesabı sistemi</div>
+          </div>
+          <button class="btn-pricing-cta" id="pricingGetStartedBtn">Hemen Başla — Ücretsiz</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section class="landing-final-cta">
+      <div class="landing-section-inner">
+        <div class="final-cta-glow"></div>
+        <h2>Veri setinizi bugün <span class="text-gradient">hazırlayın</span></h2>
+        <p>Yüzlerce görüntüyü dakikalar içinde etiketleyin. AI destekli, tamamen yerel, tamamen ücretsiz.</p>
+        <div class="final-cta-buttons">
+          <button class="btn-hero-primary" id="finalGetStartedBtn">Ücretsiz Hesap Oluştur</button>
+          <button class="btn-hero-secondary" id="finalSignInBtn">Zaten Hesabınız Var mı? Giriş Yapın</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="landing-footer">
+      <div class="landing-section-inner">
+        <div class="footer-inner">
+          <div class="footer-brand">
+            <img src="/logo.png" alt="YOLO Editor" style="width:32px;border-radius:6px;">
+            <span>YOLO Editor</span>
+          </div>
+          <div class="footer-links">
+            <a href="#features">Özellikler</a>
+            <a href="#how-it-works">Nasıl Çalışır</a>
+            <a href="#use-cases">Kullanım Alanları</a>
+          </div>
+          <div class="footer-copy">
+            © 2024 YOLO Editor · AI Dataset Labeling Platform · Tamamen Yerel
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ===================================================== -->
+  <!-- 0.5. AUTH VIEW (Giriş Yap / Kayıt Ol)                 -->
+  <!-- ===================================================== -->
+  <div id="authView" class="view-screen auth-view" style="display:none;">
+    <div class="auth-bg-glow auth-glow-1"></div>
+    <div class="auth-bg-glow auth-glow-2"></div>
+    <div class="auth-bg-grid"></div>
+
+    <!-- Auth Left Panel -->
+    <div class="auth-left">
+      <div class="auth-left-inner">
+        <button class="auth-top-back-btn" id="authTopBackBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Ana Sayfaya Dön
+        </button>
+
+        <div class="auth-brand-area" id="authBrandLogoArea" style="cursor:pointer;" title="Ana Sayfaya Dön">
+          <img src="/logo.png" alt="YOLO Editor" class="auth-brand-logo">
+          <div>
+            <div class="auth-brand-name">YOLO<span style="color:#3b82f6;">Editor</span></div>
+            <div class="auth-brand-sub">AI Dataset Platform</div>
+          </div>
+        </div>
+
+        <h2 class="auth-left-headline">Veri setinizi <br><span class="text-gradient">AI ile hazırlayın</span></h2>
+        <div class="auth-feature-list">
+          <div class="auth-feat-item">
+            <span class="auth-feat-icon-svg">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path>
+              </svg>
+            </span>
+            <div>
+              <strong>YOLOWorld AI Etiketleme</strong>
+              <p>Prompt bazlı otomatik nesne tespiti</p>
+            </div>
+          </div>
+          <div class="auth-feat-item">
+            <span class="auth-feat-icon-svg">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path>
+              </svg>
+            </span>
+            <div>
+              <strong>Toplu İşleme</strong>
+              <p>Yüzlerce görüntüyü tek seferde etiketle</p>
+            </div>
+          </div>
+          <div class="auth-feat-item">
+            <span class="auth-feat-icon-svg">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </span>
+            <div>
+              <strong>Full Privacy</strong>
+              <p>Your data stays on your local disk</p>
+            </div>
+          </div>
+          <div class="auth-feat-item">
+            <span class="auth-feat-icon-svg">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </span>
+            <div>
+              <strong>YOLO Format Export</strong>
+              <p>Train/Val split with ready ZIP package</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auth Right Panel (Form) -->
+    <div class="auth-right">
+      <div class="auth-form-card">
+
+        <!-- LOGIN MODE -->
+        <div id="authLoginMode" class="auth-mode">
+          <h2 class="auth-form-title">Giriş Yap</h2>
+          <p class="auth-form-sub">Hesabınıza erişin</p>
+
+          <button class="btn-google" id="loginGoogleBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+              <path fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            Google ile Giriş Yap
+          </button>
+
+          <div class="auth-divider"><span>veya</span></div>
+
+          <div class="auth-field">
+            <label>E-posta Adresi</label>
+            <input type="email" id="loginEmail" placeholder="ornek@email.com" autocomplete="email">
+            <span class="auth-field-error" id="loginEmailError"></span>
+          </div>
+          <div class="auth-field">
+            <label>Şifre</label>
+            <div class="auth-password-wrap">
+              <input type="password" id="loginPassword" placeholder="Şifrenizi girin" autocomplete="current-password">
+              <button type="button" class="auth-eye-btn" data-target="loginPassword" aria-label="Şifreyi Göster/Gizle">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+            <span class="auth-field-error" id="loginPasswordError"></span>
+          </div>
+
+          <div class="auth-row-between">
+            <label class="auth-remember">
+              <input type="checkbox" id="loginRemember"> Beni Hatırla
+            </label>
+            <button type="button" class="auth-link-btn" id="goForgotBtn">Şifremi Unuttum</button>
+          </div>
+
+          <button class="btn-auth-submit" id="loginSubmitBtn">
+            <span>Giriş Yap</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+
+          <div class="auth-switch-row">
+            Hesabınız yok mu?
+            <button type="button" class="auth-link-btn" id="goRegisterBtn">Kayıt Olun</button>
+          </div>
+        </div>
+
+        <!-- REGISTER MODE -->
+        <div id="authRegisterMode" class="auth-mode" style="display:none;">
+          <h2 class="auth-form-title">Hesap Oluştur</h2>
+          <p class="auth-form-sub">Ücretsiz başlayın, kurulum gerektirmez</p>
+
+          <button class="btn-google" id="registerGoogleBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+              <path fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            Google ile Kayıt Ol
+          </button>
+
+          <div class="auth-divider"><span>veya</span></div>
+
+          <div class="auth-field">
+            <label>Ad Soyad</label>
+            <input type="text" id="registerName" placeholder="Adınız Soyadınız" autocomplete="name">
+            <span class="auth-field-error" id="registerNameError"></span>
+          </div>
+          <div class="auth-field">
+            <label>E-posta Adresi</label>
+            <input type="email" id="registerEmail" placeholder="ornek@email.com" autocomplete="email">
+            <span class="auth-field-error" id="registerEmailError"></span>
+          </div>
+          <div class="auth-field">
+            <label>Şifre <span class="auth-hint">(en az 8 karakter)</span></label>
+            <div class="auth-password-wrap">
+              <input type="password" id="registerPassword" placeholder="Güçlü bir şifre oluşturun"
+                autocomplete="new-password">
+              <button type="button" class="auth-eye-btn" data-target="registerPassword" aria-label="Şifreyi Göster/Gizle">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+            <div class="password-strength-bar">
+              <div class="password-strength-fill" id="pwStrengthFill"></div>
+            </div>
+            <span class="password-strength-label" id="pwStrengthLabel"></span>
+            <span class="auth-field-error" id="registerPasswordError"></span>
+          </div>
+          <div class="auth-field">
+            <label>Şifre Tekrar</label>
+            <div class="auth-password-wrap">
+              <input type="password" id="registerPasswordConfirm" placeholder="Şifrenizi tekrar girin"
+                autocomplete="new-password">
+              <button type="button" class="auth-eye-btn" data-target="registerPasswordConfirm" aria-label="Şifreyi Göster/Gizle">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+            <span class="auth-field-error" id="registerConfirmError"></span>
+          </div>
+
+          <div class="auth-terms-row">
+            <label>
+              <input type="checkbox" id="registerTerms">
+              <span>Kullanım koşullarını ve gizlilik politikasını kabul ediyorum</span>
+            </label>
+          </div>
+
+          <button class="btn-auth-submit" id="registerSubmitBtn">
+            <span>Hesap Oluştur</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+
+          <div class="auth-switch-row">
+            Zaten hesabınız var mı?
+            <button type="button" class="auth-link-btn" id="goLoginBtn">Giriş Yapın</button>
+          </div>
+        </div>
+
+        <!-- FORGOT PASSWORD MODE -->
+        <div id="authForgotMode" class="auth-mode" style="display:none;">
+          <button type="button" class="auth-back-btn" id="forgotBackBtn">← Geri</button>
+          <h2 class="auth-form-title">Şifremi Unuttum</h2>
+          <p class="auth-form-sub">E-posta adresinize sıfırlama kodu göndereceğiz</p>
+
+          <!-- Step 1: Email -->
+          <div id="forgotStep1">
+            <div class="auth-field">
+              <label>E-posta Adresi</label>
+              <input type="email" id="forgotEmail" placeholder="Kayıtlı e-posta adresiniz">
+              <span class="auth-field-error" id="forgotEmailError"></span>
+            </div>
+            <button class="btn-auth-submit" id="forgotSendBtn">
+              <span>Sıfırlama Kodu Gönder</span>
+            </button>
+          </div>
+
+          <!-- Step 2: Code + New Password -->
+          <div id="forgotStep2" style="display:none;">
+            <div class="auth-info-box" id="forgotCodeDisplay"></div>
+            <div class="auth-field">
+              <label>Sıfırlama Kodu (6 hane)</label>
+              <input type="text" id="forgotCode" placeholder="123456" maxlength="6"
+                style="letter-spacing:0.3em;font-size:1.2rem;text-align:center;">
+              <span class="auth-field-error" id="forgotCodeError"></span>
+            </div>
+            <div class="auth-field">
+              <label>Yeni Şifre</label>
+              <div class="auth-password-wrap">
+                <input type="password" id="forgotNewPassword" placeholder="Yeni şifreniz (en az 8 karakter)">
+                <button type="button" class="auth-eye-btn" data-target="forgotNewPassword" aria-label="Şifreyi Göster/Gizle">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+              <span class="auth-field-error" id="forgotNewPwError"></span>
+            </div>
+            <button class="btn-auth-submit" id="forgotResetBtn">
+              <span>Şifremi Güncelle</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- AUTH ALERT -->
+        <div id="authAlert" class="auth-alert" style="display:none;"></div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== -->
+  <!-- 1. MAIN APP SHELL (Workspace & Dual Sidebar Layout)  -->
+  <!-- ===================================================== -->
+  <div id="mainAppShell" class="app-shell view-screen" style="display:none;">
+
+    <!-- A. GLOBAL WORKSPACE SIDEBAR (Wide or Compact Icon Rail) -->
+    <aside id="globalSidebar" class="global-sidebar">
+      <div class="ws-sidebar-header">
+        <div class="ws-brand-row">
+          <img src="/logo.png" alt="YOLO Editor" class="ws-brand-logo">
+          <div class="ws-brand-text">
+            <span class="ws-brand-name">YOLO<span style="color:#3b82f6;">Editor</span></span>
+          </div>
+        </div>
+        <div class="ws-selector-box" id="wsSelectorBox">
+          <div class="ws-selector-info">
+            <span class="ws-title" id="wsTitle">YOLO Workspace</span>
+            <span class="ws-plan-badge">Yerel & Bulut Hibrit · Sınırsız</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Workspace Navigation Menu -->
+      <nav class="ws-nav-menu">
+        <button class="ws-nav-item active" data-wstab="agent" id="wsNavAgent">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path
+              d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83">
+            </path>
+          </svg>
+          <span class="ws-nav-text">AI Asistan</span>
+          <span class="ws-nav-badge-new">YENİ</span>
+        </button>
+
+        <button class="ws-nav-item" data-wstab="projects" id="wsNavProjects">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span class="ws-nav-text">Projeler</span>
+          <span class="ws-nav-count" id="wsNavProjectsCount">0</span>
+        </button>
+
+        <button class="ws-nav-item" data-wstab="assets" id="wsNavAssets">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          <span class="ws-nav-text">Görsel Havuzu</span>
+        </button>
+
+        <button class="ws-nav-item" data-wstab="explore" id="wsNavExplore">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+          </svg>
+          <span class="ws-nav-text">Hazır Şablonlar</span>
+        </button>
+
+        <button class="ws-nav-item" data-wstab="settings" id="wsNavSettings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+            </path>
+          </svg>
+          <span class="ws-nav-text">Ayarlar</span>
+        </button>
+
+        <button class="ws-nav-item admin-only-tab" data-wstab="admin" id="wsNavAdmin" style="display:none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span class="ws-nav-text">Admin Paneli</span>
+          <span class="ws-nav-badge-admin">YÖNETİCİ</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Bottom Area (Free Badge, User Profile & Logout) -->
+      <div class="ws-sidebar-bottom">
+        <div class="ws-free-plan-badge">
+          <div class="ws-free-plan-title">Sınırsız & Ücretsiz</div>
+          <div class="ws-free-plan-sub">Yerel AI & Cloudflare D1 Aktif</div>
+        </div>
+
+        <div class="ws-user-row" id="wsUserMenuBtn">
+          <img class="ws-user-avatar" id="wsUserAvatar" src="" alt="User">
+          <div class="ws-user-meta">
+            <span class="ws-user-name" id="wsUserName">Kullanıcı</span>
+            <span class="ws-user-role">Workspace Sahibi</span>
+          </div>
+          <button class="ws-user-logout-btn" id="wsLogoutBtn" title="Çıkış Yap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+
+    <!-- B. PROJECT CONTEXTUAL SIDEBAR (Shown when inside a project) -->
+    <aside id="projectSidebar" class="project-sidebar" style="display:none;">
+      <div class="proj-sidebar-header">
+        <button class="btn-back-workspace" id="projBackToWorkspaceBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+          <span>Tüm Projeler</span>
+        </button>
+        <div class="proj-brand-block">
+          <div class="proj-cover-mini" id="projSidebarCover">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
+          <div class="proj-info-mini">
+            <h3 class="proj-name-mini" id="projSidebarName">Proje Adı</h3>
+            <span class="proj-type-badge-mini" id="projSidebarType">Nesne Tespiti</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project Navigation Items -->
+      <nav class="proj-nav-menu">
+        <div class="proj-nav-section-title">VERİ</div>
+
+        <button class="proj-nav-item active" data-ptab="upload">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span>Veri Yükle</span>
+        </button>
+
+        <button class="proj-nav-item" data-ptab="annotate">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          <span>Etiketle</span>
+          <span class="proj-badge-count" id="projAnnotateBadge">0</span>
+        </button>
+
+        <button class="proj-nav-item" data-ptab="dataset">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          <span>Veri Seti Galerisi</span>
+          <span class="proj-badge-count" id="projDatasetBadge">0</span>
+        </button>
+
+        <button class="proj-nav-item" data-ptab="classes">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+            </path>
+          </svg>
+          <span>Sınıflar &amp; Promptlar</span>
+        </button>
+
+        <div class="proj-nav-section-title" style="margin-top:16px;">MODELLER &amp; DIŞA AKTARMA</div>
+
+        <button class="proj-nav-item" data-ptab="train">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+          <span>Model Eğit (Training)</span>
+        </button>
+
+        <button class="proj-nav-item" data-ptab="export">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span>Dışa Aktar (ZIP İndir)</span>
+        </button>
+      </nav>
+
+      <div class="proj-sidebar-footer">
+        <button id="projLaunchStudioBtn" class="btn-proj-launch">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span>Studio'da Aç</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- C. MAIN WORKSPACE VIEWPORT -->
+    <main id="mainWorkspaceContent" class="main-workspace-content">
+
+      <!-- ===================================================== -->
+      <!-- VIEW 1: AGENT WORKSPACE (AI Chat Assistant & Blueprint Engine) -->
+      <!-- ===================================================== -->
+      <section id="agentWorkspaceView" class="workspace-view active">
+        
+        <!-- State 1: Agent Welcome / Landing State (When no chat active) -->
+        <div id="agentHeroContainer" class="agent-view-container">
+          <div class="agent-hero-block">
+            <div class="agent-avatar-glow-wrap">
+              <div class="agent-avatar-glow">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path>
+                </svg>
+              </div>
+            </div>
+            <h1 class="agent-greeting-title">
+              Merhaba <span id="agentUserNameGreeting">çelik çelik</span>, bugün ne geliştirmek istiyorsunuz?
+            </h1>
+            <p class="agent-hero-sub">YOLOv8 &amp; YOLOWorld destekli yapay zeka asistanınızla veri setleri tasarlayın, etiketleri otomatikleştirin veya model stratejinizi planlayın.</p>
+
+            <!-- Prompt Input Box with AI Glow -->
+            <div class="agent-prompt-box-wrap">
+              <div class="agent-prompt-box">
+                <textarea id="agentPromptInput"
+                  placeholder="Örn: Şantiyede baret ve reflektif yelek takan işçileri tespit et, veya trafikteki araçları say..."></textarea>
+                <div class="agent-prompt-footer">
+                  <div class="agent-selector-pill">
+                    <span class="agent-tag-label">✨ Multi-AI Asistan · Gemini · Claude · OpenAI · Groq</span>
+                  </div>
+                  <button id="agentPromptSubmitBtn" class="agent-send-btn" title="Mesaj Gönder & Sohbeti Başlat">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <line x1="12" y1="19" x2="12" y2="5"></line>
+                      <polyline points="5 12 12 5 19 12"></polyline>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Action Pills -->
+            <div class="agent-quick-pills-row">
+              <button class="quick-action-pill" data-action="plan">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M12 8v8M8 12h8"></path>
+                </svg>
+                <span>İş Güvenliği Tespiti</span>
+              </button>
+              <button class="quick-action-pill" data-action="batch">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                <span>Şişe Dolum &amp; Kusur Analizi</span>
+              </button>
+              <button class="quick-action-pill" data-action="traffic">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <polyline points="1 20 1 14 7 14"></polyline>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                <span>Otoyol Araç &amp; Hız Tespiti</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Examples & Recent Work Section -->
+          <div class="agent-bottom-grid">
+            <!-- Examples -->
+            <div class="agent-section-block">
+              <div class="agent-section-header">
+                <h3>Örnek Şablonlar</h3>
+                <button class="agent-link-btn" id="agentSeeAllExamplesBtn">Tümünü Gör</button>
+              </div>
+              <div class="examples-card-grid">
+                <div class="example-proj-card" data-template="bottle">
+                  <div class="example-card-thumb thumb-bottle">
+                    <span class="example-badge">Endüstriyel</span>
+                  </div>
+                  <div class="example-card-body">
+                    <h4>Şişe Dolum &amp; Kusur Analizi</h4>
+                    <p>Dolum hattında eksik sıvı, kapak hataları ve kırıkları kontrol edin.</p>
+                  </div>
+                </div>
+
+                <div class="example-proj-card" data-template="traffic">
+                  <div class="example-card-thumb thumb-traffic">
+                    <span class="example-badge">Ulaşım</span>
+                  </div>
+                  <div class="example-card-body">
+                    <h4>Trafik Akışı &amp; Araç Takibi</h4>
+                    <p>Şeritlerdeki araçları, kamyonları ve yayaları sayın ve izleyin.</p>
+                  </div>
+                </div>
+
+                <div class="example-proj-card" data-template="ppe">
+                  <div class="example-card-thumb thumb-ppe">
+                    <span class="example-badge">İSG</span>
+                  </div>
+                  <div class="example-card-body">
+                    <h4>İş Güvenliği (Baret &amp; Yelek Kontrolü)</h4>
+                    <p>Zorunlu koruyucu ekipman giyen saha personelini tespit edin.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="agent-section-block">
+              <div class="agent-section-header">
+                <h3>Hızlı Eylemler</h3>
+              </div>
+              <div class="recent-list-wrap" id="agentRecentProjectsList">
+                <div class="recent-item-row" style="display:flex; align-items:center; justify-content:space-between; padding:12px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                  <div>
+                    <strong style="color:#fff; font-size:0.9rem;">Manuel Proje Oluştur</strong>
+                    <div style="font-size:0.75rem; color:#94a3b8;">Kendi sınıflarınızla sıfırdan proje açın</div>
+                  </div>
+                  <button class="btn-secondary btn-sm" id="agentQuickCreateBtn">Oluştur</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- State 2: Active AI Chat Room / Conversation Interface -->
+        <div id="agentChatContainer" class="agent-chat-container" style="display:none;">
+          <div class="agent-chat-header">
+            <div class="agent-chat-header-info">
+              <div class="agent-chat-avatar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="agent-chat-title">YOLO AI Asistan</h3>
+                <span class="agent-chat-status">
+                  <span class="pulse-dot"></span> Çevrimiçi · Gemini / Claude / OpenAI / Groq (12 API Havuzu)
+                </span>
+              </div>
+            </div>
+            <div class="agent-chat-actions">
+              <button class="btn-secondary btn-sm" id="agentNewChatBtn" title="Yeni Sohbet Başlat">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Yeni Sohbet</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Chat Messages Scroll Area -->
+          <div class="agent-chat-messages" id="agentChatMessages">
+            <!-- Messages injected dynamically -->
+          </div>
+
+          <!-- Sticky Chat Input Bar at Bottom -->
+          <div class="agent-chat-input-wrapper">
+            <div id="agentChatAttachmentPreview" class="agent-attachment-preview" style="display:none;">
+              <img id="agentChatAttachedImg" src="" alt="Attached Preview">
+              <span id="agentChatAttachedName" class="agent-attached-filename">gorsel.jpg</span>
+              <button id="agentChatRemoveAttachBtn" class="agent-remove-attach-btn" title="Kaldır">✕</button>
+            </div>
+            <div class="agent-chat-input-box">
+              <input type="file" id="agentChatFileInput" accept="image/*" style="display:none;">
+              <button id="agentChatAttachBtn" class="agent-attach-btn" title="Fotoğraf veya Dosya Ekle">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                </svg>
+              </button>
+              <textarea id="agentChatInput" rows="1" placeholder="AI asistana bir soru sorun veya görsel hakkında bilgi isteyin..."></textarea>
+              <button id="agentChatSendBtn" class="agent-send-btn" title="Gönder">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="19" x2="12" y2="5"></line>
+                  <polyline points="5 12 12 5 19 12"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ===================================================== -->
+      <!-- VIEW 2: PROJECTS VIEW (Dashboard Grid)                -->
+      <!-- ===================================================== -->
+      <section id="dashboardView" class="workspace-view">
+        <header class="view-content-header">
+          <div class="view-header-title-row">
+            <div>
+              <h2>Projelerim</h2>
+              <p class="view-subtitle">Çalışma alanınızda kayıtlı nesne tespiti ve sınıflandırma veri seti projeleri.</p>
+            </div>
+            <div class="view-header-actions">
+              <button id="openCreateProjectBtn" class="btn-primary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Yeni Proje Oluştur</span>
+              </button>
+            </div>
+          </div>
+          <div class="dash-toolbar">
+            <div class="search-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="projectSearchInput" placeholder="Proje veya sınıf adına göre filtrele...">
+            </div>
+            <div class="dash-sort-group">
+              <label>Sıralama:</label>
+              <select id="projectSortSelect">
+                <option value="name">İsim (A-Z)</option>
+                <option value="images_desc">En Çok Görsel</option>
+                <option value="percent_desc">En Çok Etiketlenen (%)</option>
+                <option value="percent_asc">En Az Etiketlenen (%)</option>
+              </select>
+            </div>
+          </div>
+        </header>
+
+        <div class="view-content-body">
+          <div id="projectsGrid" class="projects-grid">
+            <div class="dash-loading-card">Projeler yükleniyor...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================== -->
+      <!-- VIEW 3: ASSET LIBRARY VIEW                            -->
+      <!-- ===================================================== -->
+      <section id="assetLibraryView" class="workspace-view">
+        <header class="view-content-header">
+          <div class="view-header-title-row">
+            <div>
+              <h2>Görsel &amp; Medya Havuzu</h2>
+              <p class="view-subtitle">Çalışma alanınızdaki tüm projelerin ve ham dosyaların merkezi görsel kütüphanesi.</p>
+            </div>
+            <div class="view-header-actions">
+              <button class="btn-secondary" id="assetLibraryImportBtn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span>Görsel İçe Aktar</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Asset Filters Toolbar -->
+          <div class="assets-filter-toolbar">
+            <div class="search-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="assetSearchInput" placeholder="Dosya adına göre filtrele veya ara...">
+            </div>
+            <div class="filter-pill-select">
+              <label>Durum:</label>
+              <select id="assetFilterStatus">
+                <option value="all">Tüm Görseller</option>
+                <option value="labeled">Sadece Etiketliler</option>
+                <option value="unlabeled">Sadece Etiketsizler</option>
+              </select>
+            </div>
+            <div class="filter-pill-select">
+              <label>Proje:</label>
+              <select id="assetFilterProject">
+                <option value="">Tüm Projeler</option>
+              </select>
+            </div>
+          </div>
+        </header>
+
+        <div class="view-content-body">
+          <div id="assetsGrid" class="assets-gallery-grid">
+            <div class="empty-state-modern">
+              <div class="empty-state-icon-wrap">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+              </div>
+              <h3>Görsel Havuzunda Henüz Medya Yok</h3>
+              <p>Çalışma alanınızda kayıtlı herhangi bir projeye görsel yüklediğinizde veya içe aktardığınızda burada listelenecektir.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================== -->
+      <!-- VIEW 4: EXPLORE VIEW (Templates & Open Datasets)      -->
+      <!-- ===================================================== -->
+      <section id="exploreView" class="workspace-view">
+        <header class="view-content-header">
+          <div class="view-header-title-row">
+            <div>
+              <h2>Hazır Şablonlar &amp; Modeller</h2>
+              <p class="view-subtitle">Açık bilgisayarlı görü modelleri, hazır başlangıç veri setleri ve sektörel üretim şablonları.</p>
+            </div>
+          </div>
+
+          <!-- Explore Search & Category Filters -->
+          <div class="assets-filter-toolbar">
+            <div class="search-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="exploreSearchInput" placeholder="Şablon veya model ara (örn: güvenlik, araç, şişe)...">
+            </div>
+            <div class="filter-pill-select">
+              <label>Kategori:</label>
+              <select id="exploreCategoryFilter">
+                <option value="all">Tüm Kategoriler</option>
+                <option value="safety">İş Güvenliği</option>
+                <option value="traffic">Trafik &amp; Ulaşım</option>
+                <option value="industry">Endüstriyel Üretim</option>
+                <option value="retail">Perakende &amp; Nesne</option>
+              </select>
+            </div>
+          </div>
+        </header>
+
+        <div class="view-content-body">
+          <div class="explore-templates-grid" id="exploreTemplatesGrid">
+            <div class="explore-card" data-tmpl="ppe" data-category="safety">
+              <div class="explore-card-banner banner-safety"></div>
+              <div class="explore-card-body">
+                <span class="explore-badge">İş Güvenliği</span>
+                <h3>İnşaat Sahası Baret &amp; Yelek Tespiti</h3>
+                <p>Güvenlik yeleği ve baret takibine hazır otomatik prompt yapılandırması.</p>
+                <button class="btn-secondary btn-sm explore-use-btn" data-tmpl="ppe">Şablonu Kullan</button>
+              </div>
+            </div>
+
+            <div class="explore-card" data-tmpl="traffic" data-category="traffic">
+              <div class="explore-card-banner banner-traffic"></div>
+              <div class="explore-card-body">
+                <span class="explore-badge">Trafik &amp; Ulaşım</span>
+                <h3>Otoyol Araç &amp; Plaka Tespiti</h3>
+                <button class="btn-secondary btn-sm explore-use-btn" data-tmpl="traffic">Şablonu Kullan</button>
+              </div>
+            </div>
+
+            <div class="explore-card" data-tmpl="bottle" data-category="industry">
+              <div class="explore-card-banner banner-bottle"></div>
+              <div class="explore-card-body">
+                <span class="explore-badge">Endüstriyel Üretim</span>
+                <h3>Şişe Dolum &amp; Kalite Kontrolü</h3>
+                <p>Endüstriyel dolum hatlarında otomatik kusur ve kapak tespiti.</p>
+                <button class="btn-secondary btn-sm explore-use-btn" data-tmpl="bottle">Şablonu Kullan</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================== -->
+      <!-- VIEW 5: USER WORKSPACE SETTINGS VIEW (Safe & Clean)     -->
+      <!-- ===================================================== -->
+      <section id="settingsWorkspaceView" class="workspace-view">
+        <header class="view-content-header">
+          <div class="view-header-title-row">
+            <div>
+              <h2>Hesap ve Tercihler</h2>
+              <p class="view-subtitle">Profil bilgileri, yapay zeka çıkarım ayarları, etiketleme otomasyonları ve klavye kısayolları.</p>
+            </div>
+          </div>
+        </header>
+        <div class="view-content-body">
+
+          <!-- 1. User Profile Card -->
+          <div class="ws-settings-card">
+            <div class="ws-settings-card-header">
+              <div class="ws-settings-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+              <div>
+                <h3>Hesap &amp; Kimlik Bilgileri</h3>
+                <p class="form-desc">Kayıtlı kullanıcı profiliniz ve aktif oturum bilgileriniz.</p>
+              </div>
+            </div>
+            <div class="settings-fields-grid">
+              <div class="form-group">
+                <label>Görünen Ad</label>
+                <input type="text" id="userPrefDisplayName" readonly placeholder="Kullanıcı">
+              </div>
+              <div class="form-group">
+                <label>E-posta Adresi</label>
+                <input type="email" id="userPrefEmail" readonly placeholder="eposta@ornek.com">
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. AI Model & Inference Preferences -->
+          <div class="ws-settings-card">
+            <div class="ws-settings-card-header">
+              <div class="ws-settings-card-icon purple">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path>
+                </svg>
+              </div>
+              <div>
+                <h3>Yapay Zeka &amp; Çıkarım Motoru</h3>
+                <p class="form-desc">YOLOWorld modeli otomatik etiketleme hassasiyeti ve çalışma tercihleri.</p>
+              </div>
+            </div>
+
+            <div class="setting-toggle-row">
+              <div class="setting-toggle-info">
+                <span class="setting-toggle-title">Görsel Netlik ve Kontrast İyileştirme (Auto-Enhance)</span>
+                <span class="setting-toggle-desc">Düşük ışıklı veya bulanık fotoğrafları etiketlemeden önce otomatik filtreler.</span>
+              </div>
+              <label class="switch-slider-wrap">
+                <input type="checkbox" id="userPrefAutoEnhance" checked>
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-toggle-row">
+              <div class="setting-toggle-info">
+                <span class="setting-toggle-title">Yüksek Güvenilirlik Filtresi (High Confidence)</span>
+                <span class="setting-toggle-desc">Sadece %60 ve üzeri güvenilirlikteki AI tahminlerini otomatik kutuya dönüştürür.</span>
+              </div>
+              <label class="switch-slider-wrap">
+                <input type="checkbox" id="userPrefHighConf" checked>
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 3. Labeling & Canvas Editor Preferences -->
+          <div class="ws-settings-card">
+            <div class="ws-settings-card-header">
+              <div class="ws-settings-card-icon emerald">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+              </div>
+              <div>
+                <h3>Kanvas Editörü &amp; Otomasyon</h3>
+                <p class="form-desc">Etiketleme editöründeki çizim kılavuzları ve otomatik kaydetme davranışları.</p>
+              </div>
+            </div>
+
+            <div class="setting-toggle-row">
+              <div class="setting-toggle-info">
+                <span class="setting-toggle-title">Anında Otomatik Kaydetme (Auto-Save)</span>
+                <span class="setting-toggle-desc">Kutular taşındığında veya yeniden boyutlandırıldığında etiketleri sunucuya anında senkronize eder.</span>
+              </div>
+              <label class="switch-slider-wrap">
+                <input type="checkbox" id="userPrefAutoSave" checked>
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-toggle-row">
+              <div class="setting-toggle-info">
+                <span class="setting-toggle-title">Hizalama Çapraz Kılavuz Çizgileri (Crosshair Guides)</span>
+                <span class="setting-toggle-desc">İmlecin bulunduğu konuma göre hassas piksel kılavuz çizgileri görüntüler.</span>
+              </div>
+              <label class="switch-slider-wrap">
+                <input type="checkbox" id="userPrefCrosshair" checked>
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 4. Quick Keyboard Shortcuts Reference -->
+          <div class="ws-settings-card">
+            <div class="ws-settings-card-header">
+              <div class="ws-settings-card-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                  <line x1="6" y1="8" x2="6.01" y2="8"></line>
+                  <line x1="10" y1="8" x2="10.01" y2="8"></line>
+                  <line x1="14" y1="8" x2="14.01" y2="8"></line>
+                  <line x1="18" y1="8" x2="18.01" y2="8"></line>
+                  <line x1="8" y1="12" x2="8.01" y2="12"></line>
+                  <line x1="12" y1="12" x2="12.01" y2="12"></line>
+                  <line x1="16" y1="12" x2="16.01" y2="12"></line>
+                  <line x1="7" y1="16" x2="17" y2="16"></line>
+                </svg>
+              </div>
+              <div>
+                <h3>Hızlı Klavye Kısayolları</h3>
+                <p class="form-desc">Etiketleme editöründe işlerinizi hızlandıracak hazır tuş kombinasyonları.</p>
+              </div>
+            </div>
+
+            <div class="shortcuts-list-wrap">
+              <div class="shortcut-row">
+                <span class="shortcut-action">Sonraki Görsele Geç</span>
+                <span class="shortcut-key-badge">D veya → (Sağ Ok)</span>
+              </div>
+              <div class="shortcut-row">
+                <span class="shortcut-action">Önceki Görsele Geç</span>
+                <span class="shortcut-key-badge">A veya ← (Sol Ok)</span>
+              </div>
+              <div class="shortcut-row">
+                <span class="shortcut-action">Seçili Kutuyu Sil</span>
+                <span class="shortcut-key-badge">Delete / Backspace</span>
+              </div>
+              <div class="shortcut-row">
+                <span class="shortcut-action">AI Otomatik Etiketlemeyi Çalıştır</span>
+                <span class="shortcut-key-badge">Space (Boşluk Tuşu)</span>
+              </div>
+              <div class="shortcut-row">
+                <span class="shortcut-action">Kanvası Yakınlaştır / Uzaklaştır</span>
+                <span class="shortcut-key-badge">Ctrl + Mouse Scroll</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===================================================== -->
+      <!-- VIEW 5.5: SUPER ADMIN CONSOLE (Exclusive to Provider) -->
+      <!-- ===================================================== -->
+      <section id="adminWorkspaceView" class="workspace-view" style="display:none;">
+        <header class="view-content-header">
+          <div class="view-header-title-row">
+            <div>
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+                <h2>Sistem & Yönetici Konsolu</h2>
+                <span class="admin-badge-pill">SUPER ADMIN</span>
+              </div>
+              <p class="view-subtitle">Tüm kullanıcıları, sunucu sağlığını, yapay zeka modellerini ve sistem altyapısını izleyin ve yönetin.</p>
+            </div>
+            <button class="btn-primary btn-sm" id="adminRefreshAllBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+              <span>Verileri Yenile</span>
+            </button>
+          </div>
+
+          <!-- Admin Sub-Navigation Tabs -->
+          <div class="admin-subnav-bar">
+            <button class="admin-tab-btn active" data-atab="overview">Genel Bakış</button>
+            <button class="admin-tab-btn" data-atab="users">Kullanıcı Yönetimi</button>
+            <button class="admin-tab-btn" data-atab="models">AI Modelleri & Motor</button>
+            <button class="admin-tab-btn" data-atab="logs">İşlem & Hata Logları</button>
+            <button class="admin-tab-btn" data-atab="infrastructure">Sağlayıcı Altyapı Ayarları</button>
+          </div>
+        </header>
+
+        <div class="view-content-body admin-content-body">
+          
+          <!-- ADMIN TAB 1: OVERVIEW METRICS -->
+          <div id="adminPanelOverview" class="admin-tab-panel active">
+            <div class="admin-metrics-grid">
+              <div class="admin-metric-card">
+                <div class="admin-m-icon blue">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+                <div class="admin-m-info">
+                  <span class="admin-m-label">Toplam Kullanıcı</span>
+                  <strong class="admin-m-val" id="admTotalUsers">0</strong>
+                  <span class="admin-m-sub" id="admActiveSessions">0 aktif oturum</span>
+                </div>
+              </div>
+
+              <div class="admin-metric-card">
+                <div class="admin-m-icon green">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                </div>
+                <div class="admin-m-info">
+                  <span class="admin-m-label">Sunucu Hızlandırıcı</span>
+                  <strong class="admin-m-val" id="admDevice">CPU</strong>
+                  <span class="admin-m-sub" id="admCpuCores">- Çekirdek Aktif</span>
+                </div>
+              </div>
+
+              <div class="admin-metric-card">
+                <div class="admin-m-icon purple">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"></path></svg>
+                </div>
+                <div class="admin-m-info">
+                  <span class="admin-m-label">Yüklü AI Modelleri</span>
+                  <strong class="admin-m-val" id="admModelCount">0</strong>
+                  <span class="admin-m-sub" id="admCachedModels">Bellek hazır</span>
+                </div>
+              </div>
+
+              <div class="admin-metric-card">
+                <div class="admin-m-icon amber">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <div class="admin-m-info">
+                  <span class="admin-m-label">İşlenen Veri Seti</span>
+                  <strong class="admin-m-val" id="admTotalImages">0</strong>
+                  <span class="admin-m-sub" id="admCompletionRate">%0 tamamlandı</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Server Environment Specs -->
+            <div class="ws-settings-card" style="margin-top:20px;">
+              <div class="ws-settings-card-header">
+                <div class="ws-settings-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                </div>
+                <div>
+                  <h3>Sunucu & Çalışma Ortamı</h3>
+                  <p class="form-desc">Barındırma makinesi ve Python çalışma zamanı durumu.</p>
+                </div>
+              </div>
+              <div class="admin-spec-grid">
+                <div class="admin-spec-item">
+                  <span>İşletim Sistemi</span>
+                  <strong id="admOsName">Windows</strong>
+                </div>
+                <div class="admin-spec-item">
+                  <span>Python Sürümü</span>
+                  <strong id="admPyVersion">3.x</strong>
+                </div>
+                <div class="admin-spec-item">
+                  <span>AI Çıkarım Motoru</span>
+                  <strong id="admInferEngine">Ultralytics YOLO World v2</strong>
+                </div>
+                <div class="admin-spec-item">
+                  <span>Yerel Veri Depolama</span>
+                  <strong id="admStorageType">Root Directory + Cloudflare D1/R2</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ADMIN TAB 2: USERS MANAGEMENT -->
+          <div id="adminPanelUsers" class="admin-tab-panel" style="display:none;">
+            <div class="admin-table-controls">
+              <input type="text" id="adminUserSearchInput" class="form-input" placeholder="Kullanıcı adı veya e-posta ara...">
+              <div class="admin-table-count" id="adminUserListCount">0 kullanıcı bulundu</div>
+            </div>
+            <div class="admin-table-wrap">
+              <table class="admin-data-table">
+                <thead>
+                  <tr>
+                    <th>Kullanıcı</th>
+                    <th>E-posta</th>
+                    <th>Sağlayıcı</th>
+                    <th>Kayıt Tarihi</th>
+                    <th>Yetki Rolü</th>
+                    <th>Durum</th>
+                    <th>İşlem</th>
+                  </tr>
+                </thead>
+                <tbody id="adminUsersTableBody">
+                  <!-- Injected dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ADMIN TAB 3: MODELS & ENGINE -->
+          <div id="adminPanelModels" class="admin-tab-panel" style="display:none;">
+            <div class="admin-models-list" id="adminModelsListContainer">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+
+          <!-- ADMIN TAB 4: LOGS & AUDIT -->
+          <div id="adminPanelLogs" class="admin-tab-panel" style="display:none;">
+            <div class="admin-logs-console">
+              <div class="admin-logs-head">
+                <span>Canlı İşlem & Denetim Kayıtları</span>
+                <span class="pulse-dot"></span>
+              </div>
+              <div class="admin-logs-body" id="adminLogsBody">
+                <!-- Injected dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- ADMIN TAB 5: PROVIDER INFRASTRUCTURE KEYS -->
+          <div id="adminPanelInfra" class="admin-tab-panel" style="display:none;">
+            <!-- Cloudflare D1 & R2 Provider Configuration -->
+            <div class="ws-settings-card">
+              <div class="ws-settings-card-header">
+                <div class="ws-settings-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                  </svg>
+                </div>
+                <div>
+                  <h3>Cloudflare Bulut Entegrasyonu (D1 & R2)</h3>
+                  <p class="form-desc">Kullanıcıların bulut yedekleme, veritabanı eşitleme ve depolama altyapısı.</p>
+                </div>
+              </div>
+              <div class="settings-fields-grid">
+                <div class="form-group">
+                  <label>Cloudflare Account ID</label>
+                  <input type="text" id="cfAccountId" placeholder="abc123def456...">
+                </div>
+                <div class="form-group">
+                  <label>Cloudflare API Token</label>
+                  <input type="password" id="cfApiToken" placeholder="D1 ve R2 yetkili Bearer token">
+                </div>
+                <div class="form-group">
+                  <label>D1 Database ID</label>
+                  <input type="text" id="cfDatabaseId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                </div>
+                <div class="form-group">
+                  <label>R2 Bucket Name</label>
+                  <input type="text" id="cfR2Bucket" placeholder="yolo-editor">
+                </div>
+              </div>
+              <div class="settings-row-actions">
+                <button class="btn-primary" id="saveCfSettingsBtn">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline>
+                  </svg>
+                  <span>Bulut Ayarlarını Kaydet</span>
+                </button>
+                <button class="btn-secondary" id="testCfConnectionBtn">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                  </svg>
+                  <span>Bağlantıyı Test Et</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Google OAuth Provider Configuration -->
+            <div class="ws-settings-card">
+              <div class="ws-settings-card-header">
+                <div class="ws-settings-card-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3>Google OAuth 2.0 Kimlik Doğrulama Sağlayıcısı</h3>
+                  <p class="form-desc">Kullanıcıların Google hesapları ile tek tıkla giriş yapmasını sağlayan istemci anahtarları.</p>
+                </div>
+              </div>
+              <div class="settings-fields-grid">
+                <div class="form-group">
+                  <label>Google Client ID</label>
+                  <input type="text" id="wsSettingGoogleClientId" placeholder="123456789-abc.apps.googleusercontent.com">
+                </div>
+                <div class="form-group">
+                  <label>Google Client Secret</label>
+                  <input type="password" id="wsSettingGoogleClientSecret" placeholder="GOCSPX-xxxxxxxx">
+                </div>
+              </div>
+              <button class="btn-primary" id="wsSaveGoogleSettingsBtn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline>
+                </svg>
+                <span>Google OAuth Ayarlarını Kaydet</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===================================================== -->
+      <!-- VIEW 6: PROJECT HUB VIEW (Proje Detay ve Veri Seti)   -->
+      <!-- ===================================================== -->
+      <section id="projectHubView" class="workspace-view" style="display:none; width: 100%; height: 100%; overflow-y: auto;">
+        <div class="hub-main-viewport" style="padding: 24px 32px; width: 100%; max-width: 1300px; margin: 0 auto;">
+
+          <!-- TAB 1: UPLOAD DATA SCREEN -->
+          <section id="hubTabUpload" class="hub-tab-panel active">
+            <div class="hub-panel-header">
+              <h2>Upload Data</h2>
+              <p>Yeni görseller veya önceden etiketlenmiş YOLO dosyalarını yükleyin.</p>
+            </div>
+
+            <div class="upload-screen-container">
+              <div class="upload-config-row">
+                <div class="form-group flex-2">
+                  <label>Batch Name:</label>
+                  <input type="text" id="uploadBatchNameInput" placeholder="Uploaded on 29.08.2026 at 14:00">
+                </div>
+                <div class="form-group flex-1">
+                  <label>Tags / Notlar:</label>
+                  <input type="text" id="uploadTagsInput" placeholder="Örn: fabrika, vardiya 1">
+                </div>
+              </div>
+
+              <!-- Big Dropzone Area -->
+              <div class="hub-large-dropzone" id="hubLargeDropzone">
+                <div class="dropzone-inner-content">
+                  <div class="dropzone-icon-circle">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                  </div>
+                  <h3>Görselleri ve etiketleri buraya sürükleyin veya:</h3>
+                  <div class="dropzone-buttons-row">
+                    <button type="button" class="btn-secondary" id="hubPickFilesBtn">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>
+                      </svg>
+                      Dosyaları Seç
+                    </button>
+                    <button type="button" class="btn-secondary" id="hubPickFolderBtn">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                      </svg>
+                      Klasör Seç
+                    </button>
+                  </div>
+                  <input type="file" id="hubFileInput" multiple accept="image/*,.txt" style="display:none;">
+                  <input type="file" id="hubFolderInput" webkitdirectory directory multiple style="display:none;">
+
+                  <div class="supported-formats-pills">
+                    <span class="fmt-pill"><strong>Görseller:</strong> .jpg, .png, .bmp, .webp</span>
+                    <span class="fmt-pill"><strong>Etiketler:</strong> .txt (YOLO formatı)</span>
+                    <span class="fmt-pill"><strong>Maksimum:</strong> 25MB / dosya</span>
+                  </div>
+                </div>
+
+                <!-- Upload Progress Overlay -->
+                <div id="hubUploadProgressOverlay" class="upload-progress-overlay" style="display:none;">
+                  <div class="progress-box">
+                    <div class="progress-spinner"></div>
+                    <h4 id="hubUploadStatusMsg">Dosyalar taranıyor ve yükleniyor...</h4>
+                    <div class="progress-bar-track">
+                      <div id="hubUploadProgressBar" class="progress-bar-fill" style="width:0%;"></div>
+                    </div>
+                    <span id="hubUploadProgressPct">0%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Staged files ready to upload button -->
+              <div id="hubStagedSummaryRow" class="staged-summary-row" style="display:none;">
+                <span id="hubStagedCountText">0 dosya seçildi</span>
+                <button id="hubConfirmUploadBtn" class="btn-primary">Yüklemeyi Başlat ve Doğrula</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB 2: ANNOTATE SCREEN (Kanban Board) -->
+          <section id="hubTabAnnotate" class="hub-tab-panel" style="display:none;">
+            <div class="hub-panel-header row-between">
+              <div>
+                <h2>Annotate</h2>
+                <p>Etiketleme iş akışını ve ilerleme panosunu takip edin.</p>
+              </div>
+              <button id="hubQuickStartAnnotateBtn" class="btn-primary">
+                <span>Etiketlemeye Başla</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+              </button>
+            </div>
+
+            <div class="kanban-board-grid">
+              <!-- Column 1: Unassigned -->
+              <div class="kanban-col">
+                <div class="kanban-col-header">
+                  <div class="kanban-col-title">
+                    <span class="dot-status unassigned"></span>
+                    <h3>Unassigned (Atanmamış)</h3>
+                  </div>
+                  <span id="kanbanUnassignedBadge" class="kanban-badge">0 Resim</span>
+                </div>
+                <div class="kanban-cards-list" id="kanbanUnassignedList">
+                  <!-- Filled dynamically -->
+                </div>
+              </div>
+
+              <!-- Column 2: Annotating -->
+              <div class="kanban-col">
+                <div class="kanban-col-header">
+                  <div class="kanban-col-title">
+                    <span class="dot-status annotating"></span>
+                    <h3>Annotating (Etiketleniyor)</h3>
+                  </div>
+                  <span id="kanbanAnnotatingBadge" class="kanban-badge">0 Resim</span>
+                </div>
+                <div class="kanban-cards-list" id="kanbanAnnotatingList">
+                  <!-- Filled dynamically -->
+                </div>
+              </div>
+
+              <!-- Column 3: Dataset / Completed -->
+              <div class="kanban-col">
+                <div class="kanban-col-header">
+                  <div class="kanban-col-title">
+                    <span class="dot-status completed"></span>
+                    <h3>Dataset (Tamamlanan)</h3>
+                  </div>
+                  <span id="kanbanCompletedBadge" class="kanban-badge">0 Resim</span>
+                </div>
+                <div class="kanban-cards-list" id="kanbanCompletedList">
+                  <!-- Filled dynamically -->
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB 3: DATASET GALLERY SCREEN -->
+          <section id="hubTabDataset" class="hub-tab-panel" style="display:none;">
+            <div class="hub-panel-header row-between">
+              <div>
+                <h2>Dataset Gallery</h2>
+                <p>Tüm görselleri ve kutuları görüntüleyin, filtreleyin veya dışa aktarın.</p>
+              </div>
+              <div class="header-actions-row">
+                <button id="hubExportZipBtn" class="btn-secondary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  <span>Export Dataset (ZIP)</span>
+                </button>
+                <button id="hubBatchAiBtn" class="btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path
+                      d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83">
+                    </path>
+                  </svg>
+                  <span>Auto Label with AI</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Filter & Search Toolbar -->
+            <div class="dataset-toolbar">
+              <div class="search-box flex-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="datasetSearchInput" placeholder="Filter by filename...">
+              </div>
+
+              <select id="datasetFilterStatus" class="form-select">
+                <option value="all">Tüm Görseller</option>
+                <option value="labeled">Etiketli Görseller</option>
+                <option value="unlabeled">Etiketsiz (Boş)</option>
+              </select>
+
+              <div class="toggle-annotations-switch">
+                <label class="switch-sm">
+                  <input type="checkbox" id="toggleAnnotationsCheck" checked>
+                  <span class="slider round"></span>
+                </label>
+                <span>Kutuları Göster</span>
+              </div>
+            </div>
+
+            <!-- Grid Container -->
+            <div class="dataset-gallery-grid" id="datasetGalleryGrid">
+              <!-- Filled dynamically -->
+            </div>
+
+            <!-- Bottom Multi-Select Actions Bar -->
+            <div id="datasetSelectionBar" class="dataset-selection-bar" style="display:none;">
+              <div class="selection-count">
+                <span id="selectedImagesCount">0</span> resim seçildi
+              </div>
+              <div class="selection-actions">
+                <button id="batchDeleteSelectedBtn" class="btn-sm-danger">Seçilenleri Sil</button>
+                <button id="batchAiSelectedBtn" class="btn-sm-primary">Seçilenleri AI ile Etiketle</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB 4: SETTINGS & CLASSES SCREEN -->
+          <section id="hubTabSettings" class="hub-tab-panel" style="display:none;">
+            <div class="hub-panel-header">
+              <h2>Classes & Settings</h2>
+              <p>Proje sınıflarını, renklerini, AI modellerini ve etiket parametrelerini yönetin.</p>
+            </div>
+
+            <div class="settings-content-card">
+              <div class="form-group">
+                <label>Görünen Proje Adı:</label>
+                <input type="text" id="hubSettingsDisplayName" placeholder="Proje Adı">
+              </div>
+
+              <div class="form-group">
+                <label>Açıklama:</label>
+                <textarea id="hubSettingsDesc" rows="2" placeholder="Veri seti açıklaması..."></textarea>
+              </div>
+
+              <div class="form-group">
+                <label>Varsayılan AI Modeli:</label>
+                <select id="hubSettingsModelSelect" class="form-select">
+                  <option value="yolov8s-worldv2">YOLOv8s-World v2 (Önerilen - Hızlı & Dengeli)</option>
+                  <option value="yolov8m-worldv2">YOLOv8m-World v2 (Daha Güçlü)</option>
+                  <option value="yolov8l-worldv2">YOLOv8l-World v2 (En Yüksek Doğruluk)</option>
+                  <option value="yolov8n">YOLOv8n (Hafif Standart COCO)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <div class="section-title-row">
+                  <label>Sınıf Tanımları & AI Promptları:</label>
+                  <button type="button" id="hubSettingsAddClassBtn" class="btn-sm-primary">+ Sınıf Ekle</button>
+                </div>
+                <div id="hubSettingsClassesList" class="settings-classes-list">
+                  <!-- Filled dynamically -->
+                </div>
+              </div>
+
+              <div class="settings-footer-row">
+                <button id="hubSaveSettingsBtn" class="btn-primary">Değişiklikleri Kaydet</button>
+                <button id="hubDeleteProjectBtn" class="btn-danger">Projeyi Tamamen Sil</button>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+
+  <!-- ===================================================== -->
+  <!-- 2. CREATE PROJECT FULL VIEW (Roboflow Let's Create Your Project) -->
+  <!-- ===================================================== -->
+  <div id="createProjectView" class="view-screen" style="display:none;">
+    <header class="create-proj-header">
+      <div class="create-proj-nav">
+        <div class="nav-brand">
+          <img src="/logo.png" alt="Logo" class="mini-brand-logo">
+          <span>YOLO Editor</span>
+        </div>
+        <button id="cancelCreateProjectBtn" class="btn-close-view" title="Kapat">✕</button>
+      </div>
+    </header>
+
+    <main class="create-proj-main">
+      <div class="create-proj-container">
+        <div class="create-proj-heading">
+          <h1>Hadi projenizi oluşturalım.</h1>
+          <p class="create-proj-sub">Yeni nesne tespit veya görsel sınıflandırma veri setinizi yapılandırın.</p>
+        </div>
+
+        <div class="create-proj-card">
+          <!-- Project Name & Meta Row -->
+          <div class="form-row-2">
+            <div class="form-group flex-2">
+              <label>Proje Adı <span class="req-star">*</span></label>
+              <input type="text" id="fullNewProjName"
+                placeholder="Örn: 'Araç Tespit Modeli', 'Kusur Analizi', 'Kıyafet Tanıma'">
+              <span id="projNameError" class="input-error-msg" style="display:none;">Proje adı boş bırakılamaz.</span>
+            </div>
+
+            <div class="form-group flex-1">
+              <label>Görünürlük</label>
+              <div class="radio-pill-group">
+                <button type="button" class="pill-btn active" data-vis="public">Genel (Public)</button>
+                <button type="button" class="pill-btn" data-vis="private">Özel (Private)</button>
+              </div>
+            </div>
+
+            <div class="form-group flex-1">
+              <label>Lisans</label>
+              <select id="fullNewProjLicense" class="form-select">
+                <option value="CC BY 4.0">CC BY 4.0 (Açık)</option>
+                <option value="MIT">MIT</option>
+                <option value="Public Domain">Kamu Malı (Public Domain)</option>
+                <option value="Private">Özel / Ticari Mülkiyet</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Project Type Section -->
+          <div class="project-type-section">
+            <div class="section-title-row">
+              <label class="section-label">Proje Tipi</label>
+              <span class="ai-agent-hint">YOLO World AI destekli etiketleme motoru</span>
+            </div>
+
+            <div class="project-types-grid">
+              <!-- 1. Object Detection (Active) -->
+              <div class="type-card selected" data-type="detection">
+                <div class="type-card-left">
+                  <div class="type-card-header">
+                    <h3>Nesne Tespiti (Object Detection)</h3>
+                    <span class="type-badge active">Sınırlayıcı Kutular</span>
+                    <span class="type-badge">Sayımlar</span>
+                    <span class="type-badge">Takip</span>
+                  </div>
+                  <p class="type-card-desc">Görsellerdeki nesneleri ve konumlarını kutularla (YOLO formatı: x, y, w, h) hassas olarak belirleyin.</p>
+                </div>
+                <div class="type-card-preview">
+                  <div class="preview-mini-box">
+                    <span class="demo-box box-1">araba #1</span>
+                    <span class="demo-box box-2">araba #2</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2. Classification -->
+              <div class="type-card" data-type="classification">
+                <div class="type-card-left">
+                  <div class="type-card-header">
+                    <h3>Görsel Sınıflandırma (Classification)</h3>
+                    <span class="type-badge">Görsel Etiketleri</span>
+                    <span class="type-badge">Filtreleme</span>
+                    <span class="type-badge active"
+                      style="background:rgba(16,185,129,0.2);color:#6ee7b7;border:1px solid rgba(16,185,129,0.4);">Aktif</span>
+                  </div>
+                  <p class="type-card-desc">Tüm görsele bir veya birden fazla genel kategori etiketi atayın.</p>
+                </div>
+                <div class="type-card-preview">
+                  <div class="preview-mini-box">
+                    <span class="demo-box box-2" style="padding:6px 12px;font-size:0.9rem;">sınıf: kedi</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 3: Annotation Group / Classes -->
+          <div class="annotation-group-section">
+            <div class="section-title-row">
+              <label class="section-label">Annotation Classes (Etiketlenecek Sınıflar)</label>
+              <button type="button" id="fullAddClassBtn" class="btn-sm-primary">+ Sınıf Ekle</button>
+            </div>
+
+            <div id="fullClassesListContainer" class="classes-pills-editor">
+              <div class="cls-row-pill" data-idx="0">
+                <input type="text" class="cls-name-input" value="Object" placeholder="Sınıf adı (ör: Car, Person, Bag)">
+                <input type="color" class="cls-color-input" value="#3b82f6" title="Sınıf Rengi">
+                <input type="text" class="cls-prompts-input" placeholder="AI arama promptları (virgülle ayırın)" style="flex:2;">
+                <button type="button" class="cls-del-btn" title="Sil" disabled>✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 4: Advanced AI Auto-Label Engine Selection -->
+          <div class="form-group" style="margin-top:16px;">
+            <label>Auto-Label Model Engine</label>
+            <select id="fullProjectAiModelSelect" class="form-select">
+              <option value="yolov8s-worldv2">YOLOv8s-World v2 (Önerilen - Hızlı & Dengeli)</option>
+              <option value="yolov8m-worldv2">YOLOv8m-World v2 (Daha Güçlü)</option>
+              <option value="yolov8l-worldv2">YOLOv8l-World v2 (En Yüksek Doğruluk)</option>
+              <option value="yolov8n">YOLOv8n (Hafif Standart COCO)</option>
+            </select>
+          </div>
+
+          <!-- Action Footer -->
+          <div class="create-proj-footer">
+            <button type="button" id="cancelCreateProjectBtn2" class="btn-secondary">Cancel</button>
+            <button type="button" id="submitFullCreateProjectBtn" class="btn-primary btn-large">Create Project</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================================================== -->
+  <!-- 4. EDITOR VIEW (Etiketleme ve Kontrol Arayüzü) -->
+  <!-- ===================================================== -->
+  <div id="editorView" class="view-screen" style="display:none;">
+
+
+    <!-- Context Menu (Right-click) -->
+    <div id="contextMenu" class="context-menu" style="display:none;">
+      <button class="ctx-item" id="ctxAutoLabel">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path
+            d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83">
+          </path>
+        </svg>
+        AI ile Otomatik Çiz (Ctrl+I)
+      </button>
+      <button class="ctx-item" id="ctxFindSimilar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          <path d="M11 8v6M8 11h6"></path>
+        </svg>
+        Benzerini Tüm Set'te Bul (Few-Shot)
+      </button>
+      <div class="ctx-divider"></div>
+      <button class="ctx-item" id="ctxChangeClass">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+        Sınıfı Değiştir
+      </button>
+      <button class="ctx-item" id="ctxCopyBox">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        Kutuyu Kopyala (Ctrl+C)
+      </button>
+      <button class="ctx-item" id="ctxDuplicateBox">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="8" y="8" width="13" height="13" rx="2"></rect>
+          <rect x="3" y="3" width="13" height="13" rx="2"></rect>
+        </svg>
+        Çoğalt
+      </button>
+      <div class="ctx-divider"></div>
+      <button class="ctx-item ctx-danger" id="ctxDeleteBox">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+        Sil (Delete)
+      </button>
+    </div>
+
+    <!-- Header Bar -->
+    <header class="app-header">
+      <div class="header-left">
+        <button id="backToDashBtn" class="btn-nav-dash" title="Projeler & Dashboard Ana Ekranına Dön">
+          <img src="/logo.png" alt="YOLO Editor" style="width:22px;height:22px;border-radius:5px;object-fit:cover;">
+          <span>Projeler</span>
+        </button>
+
+        <button id="toggleLeftSidebarHeaderBtn" class="icon-toggle-btn"
+          title="Sol Resim Listesini Gizle/Göster (Kısayol: [ )">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+          </svg>
+        </button>
+
+        <!-- Category Selector -->
+        <div class="category-select-wrapper">
+          <label for="categorySelect">Klasör:</label>
+          <div class="custom-select">
+            <select id="categorySelect">
+              <option value="">Yükleniyor...</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Filter Dropdown -->
+        <div class="filter-wrapper">
+          <label for="filterSelect">Filtre:</label>
+          <select id="filterSelect">
+            <option value="all">Tüm Resimler</option>
+            <option value="labeled">Sadece Etiketliler (>0 Kutu)</option>
+            <option value="empty">Boş / Kutusuz Resimler</option>
+            <option value="flagged">Sadece İşaretliler</option>
+          </select>
+        </div>
+
+        <!-- Project Settings Button -->
+        <button id="projectSettingsBtn" class="btn-settings-header" title="Proje ve Sınıf Ayarları">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+            </path>
+          </svg>
+          <span>Ayarlar</span>
+        </button>
+      </div>
+
+      <!-- Center Navigation -->
+      <div class="header-center">
+        <button id="prevBtn" class="nav-btn" title="Önceki Resim (A veya Sol Ok)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+          <span>Önceki (A)</span>
+        </button>
+
+        <div class="image-stepper">
+          <input type="number" id="imageIndexInput" min="1" value="1">
+          <span class="stepper-separator">/</span>
+          <span id="totalImagesCount">0</span>
+        </div>
+
+        <button id="nextBtn" class="nav-btn" title="Sonraki Resim (D veya Sağ Ok)">
+          <span>Sonraki (D)</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-right">
+        <button id="flagBtn" class="icon-toggle-btn" title="Bu Resmi İşaretle / Yıldızla (Kısayol: X)">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+            <line x1="4" y1="22" x2="4" y2="15"></line>
+          </svg>
+        </button>
+
+        <div class="auto-save-wrapper" title="Otomatik Kaydet">
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoSaveToggle" checked>
+            <span class="slider round"></span>
+          </label>
+          <span class="toggle-label">Oto-Kaydet</span>
+        </div>
+
+        <button id="manualSaveBtn" class="btn-save" title="Kaydet (Ctrl+S)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          <span>Kaydet (Ctrl+S)</span>
+        </button>
+
+        <div id="saveStatusIndicator" class="status-badge saved">
+          <span class="status-dot"></span>
+          <span class="status-text">Güncel</span>
+        </div>
+
+        <button id="zenModeBtn" class="icon-toggle-btn" title="Tam Ekran Odak Modu (Kısayol: F)">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
+            </path>
+          </svg>
+        </button>
+
+        <button id="toggleRightSidebarHeaderBtn" class="icon-toggle-btn" title="Sağ Paneli Gizle/Göster (Kısayol: ] )">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="15" y1="3" x2="15" y2="21"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Navigation Progress Bar (Tracks file index position) -->
+      <div id="progressBarFill" class="header-progress-line" style="width: 0%;"></div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <div class="workspace-layout" id="mainLayout">
+      <!-- Left Sidebar: Virtualized Image List -->
+      <aside class="sidebar sidebar-left" id="sidebarLeft">
+        <div class="sidebar-header">
+          <div class="sidebar-title-row">
+            <div class="sidebar-title-group">
+              <span class="sidebar-title">Görseller</span>
+              <span id="categoryStatsBadge" class="badge badge-info" title="Etiketlenen / Toplam Resim">0/0</span>
+            </div>
+            <div class="sidebar-actions-group">
+              <button id="uploadImagesSidebarBtn" class="btn-sidebar-icon" title="Bu Projeye Resim Ekle">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+                <span class="btn-icon-badge">+</span>
+              </button>
+              <button id="uploadFolderSidebarBtn" class="btn-sidebar-icon" title="Bu Projeye Klasör Ekle">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span class="btn-icon-badge">+</span>
+              </button>
+              <input type="file" id="sidebarUploadFileInput" multiple accept="image/*,.txt" style="display:none;">
+              <input type="file" id="sidebarUploadFolderInput" webkitdirectory directory multiple style="display:none;">
+            </div>
+          </div>
+          <div class="search-input-wrapper">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="imageSearchInput" placeholder="Görsellerde ara...">
+          </div>
+        </div>
+        <div class="image-list-container" id="imageListContainer">
+          <!-- Items populated dynamically via virtual scroll -->
+        </div>
+      </aside>
+
+      <!-- Center Viewport (Canvas Area) -->
+      <main class="viewport-main" id="viewportMain">
+        <!-- Floating Canvas Toolbar -->
+        <div class="canvas-floating-toolbar" id="floatingToolbar">
+          <div class="tool-group">
+            <button id="toolDrawBtn" class="tool-btn active" title="Kutu Çiz Modu (Kısayol: C veya W)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5v14M5 12h14"></path>
+              </svg>
+              <span>Çiz</span>
+            </button>
+            <button id="toolSelectBtn" class="tool-btn" title="Kutu Seç / Taşı Modu (Kısayol: S veya V)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3l7 18 3-7 7-3L3 3z"></path>
+              </svg>
+              <span>Seç</span>
+            </button>
+            <button id="toolPanBtn" class="tool-btn" title="Resmi Kaydır Modu (Kısayol: Boşluk Tuşu)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
+                <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
+                <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
+                <path
+                  d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15">
+                </path>
+              </svg>
+              <span>El</span>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- AI Auto-Label Button -->
+          <div class="tool-group">
+            <button id="autoLabelBtn" class="tool-btn btn-ai"
+              title="AI ile Bu Resimdeki Nesneleri Otomatik Çiz (Kısayol: Ctrl+I)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path
+                  d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83">
+                </path>
+              </svg>
+              <span>AI Etiket</span>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Active Class Dropdown -->
+          <div class="class-picker-group">
+            <label for="activeClassSelect">Sınıf:</label>
+            <select id="activeClassSelect">
+              <option value="0">0: Bag</option>
+            </select>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Box Actions (Copy, Paste, Copy from Prev) -->
+          <div class="tool-group">
+            <button id="copyBoxesBtn" class="tool-btn-icon" title="Seçili Kutuları Kopyala (Ctrl+C)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+            <button id="pasteBoxesBtn" class="tool-btn-icon" title="Kutuları Yapıştır (Ctrl+V)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+            </button>
+            <button id="copyFromPrevBtn" class="tool-btn-icon" title="Önceki Resmin Kutularını Kopyala (Ctrl+Shift+V)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="11 17 6 12 11 7"></polyline>
+                <polyline points="18 17 13 12 18 7"></polyline>
+              </svg>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Undo / Redo / Revert -->
+          <div class="tool-group">
+            <button id="undoBtn" class="tool-btn-icon" disabled title="Geri Al (Ctrl+Z)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7v6h6"></path>
+                <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+              </svg>
+            </button>
+            <button id="redoBtn" class="tool-btn-icon" disabled title="Yinele / İleri Al (Ctrl+Y)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 7v6h-6"></path>
+                <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"></path>
+              </svg>
+            </button>
+            <button id="revertBtn" class="tool-btn-icon" title="Tüm Değişiklikleri Sıfırla">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                <path d="M3 3v5h5"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Selection & Delete Tools -->
+          <div class="tool-group">
+            <button id="selectAllBtn" class="tool-btn-icon" title="Tüm Kutuları Seç (Ctrl+A)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+            </button>
+            <button id="deleteSelectedBtn" class="tool-btn-icon btn-danger" disabled
+              title="Seçilileri Sil (Delete / Backspace)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+            </button>
+            <button id="clearAllBtn" class="tool-btn-icon btn-danger" title="Tüm Kutuları Temizle">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Enhancement Tools -->
+          <div class="tool-group">
+            <button id="autoEnhanceBtn" class="tool-btn-icon active"
+              title="Otomatik Akıllı Netleştirme / Kontrast (Kısayol: E)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+              </svg>
+            </button>
+            <button id="loupeBtn" class="tool-btn-icon" title="Detay Büyüteci (Kısayol: Z)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </button>
+            <button id="toggleGuideLinesBtn" class="tool-btn-icon active" title="Kılavuz Çizgileri">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"></circle>
+                <line x1="12" y1="3" x2="12" y2="21"></line>
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+              </svg>
+            </button>
+            <button id="skipEmptyBtn" class="tool-btn-icon" title="Boş Resimleri Otomatik Atla">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                <line x1="19" y1="5" x2="19" y2="19"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div class="toolbar-divider"></div>
+
+          <!-- Zoom Tools -->
+          <div class="tool-group">
+            <button id="zoomInBtn" class="tool-btn-icon" title="Yakınlaştır (+)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <line x1="11" y1="8" x2="11" y2="14"></line>
+                <line x1="8" y1="11" x2="14" y2="11"></line>
+              </svg>
+            </button>
+            <span id="zoomLevelDisplay" class="zoom-text">100%</span>
+            <button id="zoomOutBtn" class="tool-btn-icon" title="Uzaklaştır (-)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <line x1="8" y1="11" x2="14" y2="11"></line>
+              </svg>
+            </button>
+            <button id="zoomFitBtn" class="tool-btn-icon" title="Ekrana Sığdır">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
+                </path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="canvas-viewport" id="canvasViewport">
+          <div class="canvas-container" id="canvasContainer">
+            <canvas id="mainCanvas"></canvas>
+            <canvas id="loupeCanvas" class="loupe-canvas" style="display:none;"></canvas>
+          </div>
+        </div>
+      </main>
+
+      <!-- Right Sidebar: Details & Box Inspector -->
+      <aside class="sidebar sidebar-right" id="sidebarRight">
+        <!-- Current Image Metadata -->
+        <div class="sidebar-section">
+          <h3 class="section-title">Mevcut Resim Bilgisi</h3>
+          <div class="meta-grid">
+            <div class="meta-row">
+              <span class="meta-label">Dosya:</span>
+              <span class="meta-val" id="metaFilename">-</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Çözünürlük:</span>
+              <span class="meta-val" id="metaDimensions">-</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Kutu Sayısı:</span>
+              <span class="meta-val badge badge-primary" id="metaBoxCount">0</span>
+            </div>
+          </div>
+          <button id="deleteCurrentImageBtn" class="btn-delete-image"
+            title="Bu Görseli ve Varsa Etiket Dosyasını Kalıcı Olarak Sil (Shift+Delete)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <span>Görseli Sil</span>
+          </button>
+        </div>
+
+        <!-- Boxes in Current Image -->
+        <div class="sidebar-section flex-grow">
+          <div class="section-header-row">
+            <div class="box-list-title-group">
+              <input type="checkbox" id="selectAllBoxesCheckbox" class="box-select-checkbox-head"
+                title="Tüm Kutuları Seç / Seçimi Bırak">
+              <h3 class="section-title">Kutular (<span id="boxListCount">0</span>)</h3>
+            </div>
+            <div class="box-header-tools">
+              <button id="undoBoxesBtn" class="btn-box-history" disabled title="Geri Al (Ctrl+Z)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 7v6h6"></path>
+                  <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+                </svg>
+              </button>
+              <button id="redoBoxesBtn" class="btn-box-history" disabled title="Yinele / İleri Al (Ctrl+Y)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 7v6h-6"></path>
+                  <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"></path>
+                </svg>
+              </button>
+              <div class="box-bulk-actions" id="boxBulkActions" style="display:none;">
+                <span id="selectedCountBadge" class="badge-sel-count">0 seçili</span>
+                <button id="deleteBtnLabel" class="btn-bulk-delete" title="Seçili Kutuları Sil">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <span>Sil</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bulk Class Switcher (Visible when multiple boxes selected) -->
+          <div class="bulk-class-bar" id="bulkClassBar" style="display:none;">
+            <span class="bulk-lbl">Toplu Sınıf:</span>
+            <select id="bulkClassSelect" class="bulk-select">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <div class="box-items-container" id="boxItemsContainer">
+            <div class="empty-state">Bu resimde etiketlenmiş kutu yok.</div>
+          </div>
+        </div>
+
+        <!-- Shortcut Cheatsheet -->
+        <div class="sidebar-section">
+          <h3 class="section-title">Klavye Kısayolları</h3>
+          <div class="shortcut-list">
+            <div class="shortcut-item"><kbd>A</kbd> veya <kbd>→</kbd><span>Önceki Resim</span></div>
+            <div class="shortcut-item"><kbd>D</kbd> veya <kbd>→</kbd><span>Sonraki Resim</span></div>
+            <div class="shortcut-item"><kbd>Ctrl+I</kbd><span>AI Otomatik Çiz</span></div>
+            <div class="shortcut-item"><kbd>Z (Basılı)</kbd><span>Detay Büyüteci</span></div>
+            <div class="shortcut-item"><kbd>H (Basılı)</kbd><span>Kutuları Gizle</span></div>
+            <div class="shortcut-item"><kbd>E</kbd><span>Netleştirme Aç/Kapat</span></div>
+            <div class="shortcut-item"><kbd>X</kbd><span>Resmi İşaretle</span></div>
+            <div class="shortcut-item"><kbd>1</kbd> - <kbd>9</kbd><span>Hızlı Sınıf Değiştir</span></div>
+            <div class="shortcut-item"><kbd>[</kbd> / <kbd>]</kbd><span>Sol/Sağ Paneli Gizle</span></div>
+            <div class="shortcut-item"><kbd>F</kbd><span>Odak Modu (Tam Ekran)</span></div>
+            <div class="shortcut-item"><kbd>Shift</kbd> + <kbd>Tık</kbd><span>Çoklu Kutu Seçimi</span></div>
+            <div class="shortcut-item"><kbd>Ok Tuşları</kbd><span>Kutuyu 1px Kaydır (Shift:10px)</span></div>
+            <div class="shortcut-item"><kbd>Boşluk</kbd> + <kbd>Sürükle</kbd><span>Resmi Kaydır (Pan)</span></div>
+            <div class="shortcut-item"><kbd>Tekerlek</kbd><span>İmlece Doğru Yakınlaştır</span></div>
+            <div class="shortcut-item"><kbd>Ctrl</kbd> + <kbd>A</kbd><span>Tüm Kutuları Seç</span></div>
+            <div class="shortcut-item"><kbd>Ctrl</kbd> + <kbd>C</kbd> / <kbd>V</kbd><span>Kopyala / Yapıştır</span>
+            </div>
+            <div class="shortcut-item"><kbd>Ctrl+Shift+V</kbd><span>Önceki Resimden Al</span></div>
+            <div class="shortcut-item"><kbd>Ctrl</kbd> + <kbd>S</kbd><span>Etiketleri Kaydet</span></div>
+            <div class="shortcut-item"><kbd>Del / Backspace</kbd><span>Seçili Kutuyu Sil</span></div>
+          </div>
+        </div>
+
+        <!-- Overall Dataset Stats -->
+        <div class="sidebar-section">
+          <div class="section-header-row">
+            <h3 class="section-title">Kategori İstatistikleri</h3>
+            <button id="refreshStatsBtn" class="icon-btn-small" title="Yenile">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15">
+                </path>
+              </svg>
+            </button>
+          </div>
+          <div id="statsContainer" class="stats-list">
+            <!-- Populated via API -->
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ===================================================== -->
+  <!-- MODALS -->
+  <!-- ===================================================== -->
+
+  <!-- Create Project Modal -->
+  <div id="createProjectModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Yeni Proje / Veri Seti Ekle</h2>
+        <button class="modal-close-btn" data-close="createProjectModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Klasör Adı (İngilizce / Küçük Harf):</label>
+          <input type="text" id="newProjFolder" placeholder="ör: shoes, cars, electronics">
+          <small class="form-hint">Bu isimle proje klasörü ve etiket klasörü oluşturulacaktır.</small>
+        </div>
+        <div class="form-group">
+          <label>Görünen Proje Adı:</label>
+          <input type="text" id="newProjDisplayName" placeholder="ör: Ayakkabı Veri Seti">
+        </div>
+        <div class="form-group">
+          <label>Açıklama (Opsiyonel):</label>
+          <textarea id="newProjDesc" rows="2" placeholder="Veri seti hakkında kısa not..."></textarea>
+        </div>
+        <div class="form-group">
+          <div class="classes-toolbar-top">
+            <label>Proje Sınıfları:</label>
+            <div style="display:flex; gap:6px; margin-left:auto;">
+              <button type="button" id="autoDetectProjClassBtn" class="btn-sm-secondary"
+                title="Yüklenen dosyalardan sınıfları otomatik tespit et">Otomatik Algıla</button>
+              <button type="button" id="addNewProjClassBtn" class="btn-sm-primary">+ Sınıf Ekle</button>
+            </div>
+          </div>
+          <div id="newProjClassesList" class="new-proj-classes-container">
+            <div class="class-inline-row new-proj-cls-row" data-id="0">
+              <input type="number" class="new-cls-id" value="0" style="width:50px;">
+              <input type="text" class="new-cls-name" placeholder="Sınıf Adı (ör: Scarf, Belt, Shoe...)"
+                style="flex:1;">
+              <input type="color" class="new-cls-color" value="#3b82f6">
+              <button type="button" class="btn-row-del" disabled title="Sil">&times;</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Veri / Görselleri Yükle (İsteğe Bağlı):</label>
+          <div class="upload-dropzone" id="createProjDropzone">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p>Görselleri veya <strong>Klasörü</strong> buraya sürükleyin veya butonları kullanın</p>
+            <div class="upload-btn-row">
+              <button type="button" class="btn-sm-secondary" id="createProjPickFilesBtn">Resimleri Seç</button>
+              <button type="button" class="btn-sm-secondary" id="createProjPickFolderBtn">Klasör Seç</button>
+            </div>
+            <input type="file" id="createProjFileInput" multiple accept="image/*" style="display:none;">
+            <input type="file" id="createProjFolderInput" webkitdirectory directory multiple style="display:none;">
+            <div id="createProjSelectedCount" class="upload-selected-text"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-close="createProjectModal">İptal</button>
+        <button id="submitCreateProjectBtn" class="btn-primary">Proje Oluştur</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Class Configuration Modal -->
+  <div id="classConfigModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Sınıf &amp; AI Prompt Ayarları</h2>
+        <button class="modal-close-btn" data-close="classConfigModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Bu proje için sınıf tanımlarını ve AI modelinin arayacağı anahtar kelimeleri özelleştirin.
+        </p>
+        <div id="classConfigRows" class="class-config-list">
+          <!-- Populated dynamically -->
+        </div>
+        <div class="form-group" style="margin-top:12px;">
+          <label>AI Arama Anahtar Kelimeleri (Virgülle Ayırın):</label>
+          <input type="text" id="classPromptsInput" placeholder="ör: handbag, purse, backpack, tote bag">
+          <small class="form-hint">YOLOWorld modeli nesneleri ararken bu kelimeleri referans alır.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-close="classConfigModal">İptal</button>
+        <button id="submitClassConfigBtn" class="btn-primary">Ayarları Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Batch Auto-Labeling Modal -->
+  <div id="batchAutoLabelModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Toplu Otomatik AI Etiketleme</h2>
+        <button class="modal-close-btn" data-close="batchAutoLabelModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="batch-info-box">
+          <strong id="batchProjTitle">Proje: -</strong>
+          <p>Yapay zeka modeli klasördeki tüm resimleri sırayla tarayarak otomatik kutulayacaktır.</p>
+        </div>
+        <div class="form-group">
+          <label>AI Güven Eşiği (Confidence): <span id="batchConfVal" class="badge badge-info">%7</span></label>
+          <input type="range" id="batchConfRange" min="0.03" max="0.40" step="0.01" value="0.07">
+        </div>
+        <div class="form-group checkbox-group">
+          <label class="custom-checkbox">
+            <input type="checkbox" id="batchOverwriteCheck">
+            <span>Daha önce etiketlenmiş resimleri de tekrar etiketle (Üzerine Yaz)</span>
+          </label>
+        </div>
+
+        <!-- Live Progress Container -->
+        <div id="batchProgressContainer" style="display:none; margin-top:16px;">
+          <div class="batch-status-row">
+            <span id="batchStatusText">İşleniyor...</span>
+            <span id="batchProgressPct">0%</span>
+          </div>
+          <div class="batch-progress-track">
+            <div id="batchProgressBar" class="batch-progress-fill" style="width:0%;"></div>
+          </div>
+          <div class="batch-counts-row">
+            <span id="batchProcessedCount">0 / 0 resim</span>
+            <span id="batchNewCount" style="color:var(--success)">+0 yeni etiketlendi</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-close="batchAutoLabelModal">Kapat</button>
+        <button id="startBatchBtn" class="btn-primary">Toplu Etiketlemeyi Başlat</button>
+        <button id="stopBatchBtn" class="btn-danger" style="display:none;">Durdur</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Dataset ZIP Modal -->
+  <div id="exportZipModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Train / Val Split &amp; ZIP İndir</h2>
+        <button class="modal-close-btn" data-close="exportZipModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Veri setinizi doğrudan YOLOv8 / YOLOv11 / YOLOv5 model eğitimi için hazır train/val split
+          formatında paketleyin.</p>
+        <div class="form-group">
+          <label>Eğitim / Doğrulama Oranı: <span id="splitRatioText" class="badge badge-primary">%80 Train / %20
+              Val</span></label>
+          <input type="range" id="splitRatioRange" min="0.50" max="0.95" step="0.05" value="0.80">
+        </div>
+        <div class="export-preview-card">
+          <div class="export-stat-item">
+            <span>data.yaml</span>
+            <strong>Otomatik Üretilir</strong>
+          </div>
+          <div class="export-stat-item">
+            <span>Format</span>
+            <strong>YOLO Normalized (.txt)</strong>
+          </div>
+        </div>
+        <div id="exportResultArea" style="display:none; margin-top:16px;">
+          <div class="export-success-box">
+            <span>ZIP Arşivi Hazırlandı</span>
+            <a id="downloadZipLink" href="#" class="btn-primary"
+              style="margin-top:8px; display:inline-flex; align-items:center; gap:6px; text-decoration:none;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>ZIP Dosyasını İndir</span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-close="exportZipModal">Kapat</button>
+        <button id="generateZipBtn" class="btn-primary">Paketle &amp; Oluştur</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Few-Shot Find Similar Modal -->
+  <div id="findSimilarModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h2>Benzer Nesneleri Bul (Few-Shot Visual Matcher)</h2>
+        <button class="modal-close-btn" data-close="findSimilarModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Çizdiğiniz referans kutu ile klasördeki diğer resimlerde görsel olarak eşleşen nesneler
+          bulundu:</p>
+        <div id="findSimilarResultsGrid" class="similar-results-grid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-close="findSimilarModal">Kapat</button>
+        <button id="applySimilarBoxesBtn" class="btn-primary">Eşleşenleri Otomatik Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Project & Class Settings Modal -->
+  <div id="projectSettingsModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+            </path>
+          </svg>
+          <h2>Proje &amp; Sınıf Ayarları</h2>
+        </div>
+        <button class="modal-close-btn" data-close="projectSettingsModal">&times;</button>
+      </div>
+
+      <!-- Tabs Header -->
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" data-tab="tabProjGeneral">Genel Bilgiler</button>
+        <button class="modal-tab-btn" data-tab="tabProjClasses">Sınıflar &amp; Renkler</button>
+        <button class="modal-tab-btn" data-tab="tabProjAI">AI Algılama Ayarları</button>
+        <button class="modal-tab-btn" data-tab="tabProjStats">Dağılım &amp; İstatistik</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Tab 1: General Info -->
+        <div id="tabProjGeneral" class="tab-pane active">
+          <div class="settings-grid-2">
+            <div class="form-group">
+              <label>Proje Görünen Adı:</label>
+              <input type="text" id="settingsProjName" class="form-control" placeholder="Örn: Scarf (Eşarp / Şal)">
+            </div>
+            <div class="form-group">
+              <label>Klasör Adı:</label>
+              <input type="text" id="settingsProjFolder" class="form-control" readonly disabled>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Proje Açıklaması:</label>
+            <textarea id="settingsProjDesc" class="form-control" rows="3"
+              placeholder="Bu veri seti projesi hakkında detaylı açıklama..."></textarea>
+          </div>
+          <div class="stats-summary-cards">
+            <div class="stat-box"><span class="stat-num" id="statProjTotalImg">0</span><span class="stat-lbl">Toplam
+                Resim</span></div>
+            <div class="stat-box"><span class="stat-num green" id="statProjLabeledImg">0</span><span
+                class="stat-lbl">Etiketlenmiş</span></div>
+            <div class="stat-box"><span class="stat-num orange" id="statProjEmptyImg">0</span><span
+                class="stat-lbl">Etiketsiz / Boş</span></div>
+            <div class="stat-box"><span class="stat-num blue" id="statProjTotalBoxes">0</span><span
+                class="stat-lbl">Toplam Kutu</span></div>
+          </div>
+
+          <div class="settings-danger-zone">
+            <div class="danger-zone-text">
+              <h4>Projeyi Sil</h4>
+              <p>Bu projeyi ve kayıtlı tüm etiket/veri dosyalarını kalıcı olarak siler.</p>
+            </div>
+            <button id="deleteProjectBtn" class="btn-danger-solid">Projeyi Sil</button>
+          </div>
+        </div>
+
+        <!-- Tab 2: Class Management -->
+        <div id="tabProjClasses" class="tab-pane">
+          <div class="classes-toolbar-top">
+            <p class="modal-desc">Projeye özel sınıfları, renklerini ve AI algılama promptlarını belirleyin:</p>
+            <button id="addNewClassRowBtn" class="btn-sm-primary">+ Yeni Sınıf Ekle</button>
+          </div>
+
+          <div class="classes-table-wrap">
+            <table class="classes-table" id="classesSettingsTable">
+              <thead>
+                <tr>
+                  <th style="width: 55px;">ID</th>
+                  <th style="width: 140px;">Sınıf Adı</th>
+                  <th style="width: 80px;">Renk</th>
+                  <th>AI Algılama Promptları (Virgülle ayırın)</th>
+                  <th style="width: 60px;">İşlem</th>
+                </tr>
+              </thead>
+              <tbody id="classesTableBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 3: AI Settings -->
+        <div id="tabProjAI" class="tab-pane">
+          <div class="form-group">
+            <label>Varsayılan AI Algılama Güven Eşiği (Confidence): <strong id="aiConfValText">0.25</strong></label>
+            <input type="range" id="settingsAiConfRange" min="0.05" max="0.80" step="0.02" value="0.25">
+            <small class="form-hint">Düşük değer daha çok nesne bulur, yüksek değer sadece kesin nesneleri
+              etiketler.</small>
+          </div>
+          <div class="form-group">
+            <label>NMS Çakışma Filtresi (IoU Eşiği): <strong id="aiIouValText">0.45</strong></label>
+            <input type="range" id="settingsAiIouRange" min="0.20" max="0.80" step="0.05" value="0.45">
+            <small class="form-hint">Üst üste binen benzer kutuları filtreler.</small>
+          </div>
+          <div class="ai-tips-card">
+            <h4>AI İpucu</h4>
+            <p>YOLOWorld açık sözlüklü yapay zeka modelidir. Sınıflar sekmesindeki prompt alanına nesnenin İngilizce eş
+              anlamlılarını (örneğin: <code>scarf, shawl, neck scarf, winter scarf</code>) ekleyerek tespit doğruluğunu
+              önemli ölçüde artırabilirsiniz.</p>
+          </div>
+        </div>
+
+        <!-- Tab 4: Distribution Stats -->
+        <div id="tabProjStats" class="tab-pane">
+          <h4 style="margin-bottom:12px; font-size:14px; color:var(--text-secondary);">Sınıf Başına Kutu Dağılımı</h4>
+          <div id="classDistChart" class="class-dist-list">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" data-close="projectSettingsModal">İptal</button>
+        <button id="saveProjectSettingsBtn" class="btn-primary">Ayarları Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full Screen Premium Glassmorphic Loading Overlay -->
+  <div id="loadingOverlay" class="full-loading-overlay" style="display:none;">
+    <div class="full-loading-card">
+      <div class="full-loading-orb">
+        <div class="orb-ring ring-1"></div>
+        <div class="orb-ring ring-2"></div>
+        <div class="orb-ring ring-3"></div>
+        <div class="orb-core">
+          <svg class="orb-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path
+              d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83">
+            </path>
+          </svg>
+        </div>
+      </div>
+
+      <div class="full-loading-content">
+        <h3 id="loadingTitle" class="loading-main-title">Yapay Zeka İşlemi Sürüyor</h3>
+        <p id="loadingText" class="loading-subtitle">Görseller taranıyor ve nesneler tespit ediliyor...</p>
+
+        <!-- Progress Bar Container (shown when progress data is provided) -->
+        <div id="loadingProgressWrap" class="loading-progress-wrap" style="display:none;">
+          <div class="loading-progress-track">
+            <div id="loadingProgressBar" class="loading-progress-fill" style="width: 0%;">
+              <div class="loading-progress-shimmer"></div>
+            </div>
+          </div>
+          <div class="loading-progress-meta">
+            <span id="loadingProgressCount" class="loading-count-txt">0 / 0 Dosya</span>
+            <span id="loadingProgressPct" class="loading-pct-txt">%0</span>
+          </div>
+        </div>
+
+        <div class="loading-badges-row">
+          <div class="loading-pill">
+            <span class="pill-pulse-dot"></span>
+            <span id="loadingStatusPill">İşlem devam ediyor</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="editor.js?v=2.5.6"></script>
+</body>
+
+</html>

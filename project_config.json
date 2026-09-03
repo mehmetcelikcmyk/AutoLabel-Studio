@@ -1,0 +1,119 @@
+{
+  "projects": {
+    "merhaba": {
+      "display_name": "merhaba",
+      "description": "merhaba nesne tespit projesi",
+      "visibility": "public",
+      "license": "Private",
+      "project_type": "detection",
+      "ai_settings": {
+        "conf": 0.15,
+        "iou": 0.5
+      },
+      "model_key": "yolov8s-worldv2"
+    },
+    "bag": {
+      "display_name": "bag",
+      "description": "bag nesne tespit projesi",
+      "visibility": "public",
+      "license": "CC BY 4.0",
+      "project_type": "detection",
+      "ai_settings": {
+        "conf": 0.15,
+        "iou": 0.5
+      },
+      "model_key": "yolov8s-worldv2"
+    }
+  },
+  "classes": {
+    "bag": [
+      {
+        "id": 0,
+        "name": "bag",
+        "color": "#3b82f6",
+        "prompts": [
+          "bag"
+        ]
+      }
+    ],
+    "belt": {
+      "id": 1,
+      "name": "Belt",
+      "color": "#10b981",
+      "prompts": [
+        "belt",
+        "leather belt",
+        "waist belt",
+        "strap belt"
+      ]
+    },
+    "gloves": {
+      "id": 2,
+      "name": "Gloves",
+      "color": "#f59e0b",
+      "prompts": [
+        "gloves",
+        "glove",
+        "pair of gloves",
+        "mittens",
+        "winter gloves"
+      ]
+    },
+    "necklace": {
+      "id": 3,
+      "name": "Necklace",
+      "color": "#ec4899",
+      "prompts": [
+        "necklace",
+        "pendant",
+        "chain necklace",
+        "jewelry necklace",
+        "choker"
+      ]
+    },
+    "scarf": {
+      "id": 4,
+      "name": "Scarf",
+      "color": "#8b5cf6",
+      "prompts": [
+        "scarf",
+        "shawl",
+        "muffler",
+        "neck scarf",
+        "winter scarf"
+      ]
+    },
+    "tie": {
+      "id": 5,
+      "name": "Tie",
+      "color": "#06b6d4",
+      "prompts": [
+        "necktie",
+        "tie",
+        "bow tie",
+        "suit tie"
+      ]
+    },
+    "watch": {
+      "id": 6,
+      "name": "Watch",
+      "color": "#f97316",
+      "prompts": [
+        "wristwatch",
+        "watch",
+        "smartwatch",
+        "wrist watch"
+      ]
+    },
+    "merhaba": [
+      {
+        "id": 0,
+        "name": "Object",
+        "color": "#3b82f6",
+        "prompts": [
+          "object"
+        ]
+      }
+    ]
+  }
+}

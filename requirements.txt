@@ -1,0 +1,10 @@
+# YOLO Editor — Python Bağımlılıkları
+# Kurulum: pip install -r requirements.txt
+
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+ultralytics>=8.2.0
+opencv-python>=4.9.0
+Pillow>=10.3.0
+numpy>=1.26.0
+python-multipart>=0.0.9

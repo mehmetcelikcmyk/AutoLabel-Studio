@@ -1,0 +1,59 @@
+﻿# === HASSAS DOSYALAR - ASLA PUSH ETME ===
+.env
+.env.*
+!.env.example
+client_secret*.json
+*.key
+*secret*
+*token*
+*password*
+users.json
+teams.json
+team_tasks.json
+ai_chat_history.json
+settings.json
+
+# Buyuk model ve veri dosyalari
+*.pt
+*.weights
+*.onnx
+*.pb
+*.zip
+*.tar
+*.gz
+
+# Veri/proje klasorleri (buyuk goruntu/video dosyalari)
+exports/
+cache/
+weights/
+custom_models/
+*_project/
+*_labeled/
+bag/
+bag_labeled/
+merhaba/
+merhaba_labeled/
+accessory_detection_project/
+accessory_detection_project_labeled/
+bag_detection_project/
+bag_detection_project_labeled/
+.snapshots/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
