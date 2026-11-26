@@ -96,6 +96,16 @@ def _build_prompt_map(cls_list: List[Dict]) -> tuple:
 
 
 def _resolve_cls_list(category: str, config: Dict) -> List[Dict]:
+    # Cloudflare D1 birincil kaynak: Railway yeniden başlasa da proje sınıfları kaybolmaz
+    try:
+        from core.database import cf_d1_query
+        rows = cf_d1_query("SELECT classes_json FROM projects WHERE id = ? LIMIT 1", [category])
+        if rows and rows[0].get("classes_json"):
+            parsed = json.loads(rows[0]["classes_json"])
+            if isinstance(parsed, list) and parsed:
+                return parsed
+    except Exception:
+        pass
     classes_map = config.get("classes", {})
     cat_key = category.lower()
     cls_raw = classes_map.get(cat_key)
@@ -241,6 +251,26 @@ def _run_batch_auto_label_thread(
 
     iou_thresh = float(ai_settings.get("iou", 0.50))
     valid_extensions = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+    cat_dir.mkdir(parents=True, exist_ok=True)
+    # Railway gibi geçici diskli ortamlarda eksik görselleri Cloudflare R2'den indir
+    storage_info = None
+    try:
+        from core.database import cf_r2_list_objects, cf_r2_get_object
+        from api.shared.utils import get_project_storage_info
+        storage_info = get_project_storage_info(category)
+        if storage_info.get("r2_configured"):
+            r2_objs = cf_r2_list_objects(prefix=storage_info["r2_images_prefix"] + "/", limit=2500)
+            for obj in r2_objs:
+                fn = os.path.basename(obj.get("key", ""))
+                if os.path.splitext(fn)[1].lower() in valid_extensions:
+                    lp = cat_dir / fn
+                    if not lp.exists():
+                        raw_b = cf_r2_get_object(obj["key"])
+                        if raw_b:
+                            lp.write_bytes(raw_b)
+    except Exception as r2_sync_err:
+        print(f"[Batch Auto-Label R2 Sync Warning] {r2_sync_err}")
+
     all_files = sorted([f for f in os.listdir(cat_dir) if os.path.splitext(f)[1].lower() in valid_extensions]) if cat_dir.exists() else []
 
     if target_filenames:
@@ -415,6 +445,13 @@ def _run_batch_auto_label_thread(
 
                     with open(txt_path, "w", encoding="utf-8") as f:
                         f.writelines(lines)
+                    # Oluşturulan etiketi Cloudflare R2'ye de yedekle
+                    try:
+                        if storage_info and storage_info.get("r2_configured"):
+                            from core.database import cf_r2_upload
+                            cf_r2_upload("".join(lines).encode("utf-8"), f"{storage_info['r2_labels_prefix']}/{txt_path.name}", "text/plain")
+                    except Exception:
+                        pass
 
                     if lines:
                         BATCH_JOBS[batch_key]["newly_labeled"] += 1

@@ -10,19 +10,21 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install essential system packages for OpenCV and image processing
+# Install essential system packages for OpenCV, image processing, and Ultralytics CLIP
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    git \
     libgl1 \
     libglib2.0-0 \
     libgomp1 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install python requirements
+# Copy and install python requirements + CLIP for YOLO-World text prompts
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir git+https://github.com/ultralytics/CLIP.git
 
 # Copy source code and assets
 COPY . .

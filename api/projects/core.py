@@ -495,6 +495,17 @@ def get_project_settings(
     project_role = (user.get("project_role") or user.get("role") or "member").strip().lower()
     is_owner_or_captain = project_role in ("admin", "owner", "captain")
 
+    d1_proj = None
+    try:
+        rows = cf_d1_query(
+            "SELECT id, display_name, description, project_type, visibility, license, classes_json, owner_email FROM projects WHERE id = ? LIMIT 1",
+            [category]
+        )
+        if rows:
+            d1_proj = rows[0]
+    except Exception:
+        pass
+
     cat_dir = ROOT_DIR / category
     if not cat_dir.exists():
         if category == "bag" and (ROOT_DIR / "bag_detection_project").exists():
@@ -503,6 +514,8 @@ def get_project_settings(
         elif category == "bag_detection_project" and (ROOT_DIR / "bag").exists():
             category = "bag"
             cat_dir = ROOT_DIR / "bag"
+        elif d1_proj:
+            cat_dir.mkdir(parents=True, exist_ok=True)
     if not cat_dir.exists():
         raise HTTPException(status_code=404, detail="Proje klasörü bulunamadı.")
 
@@ -513,7 +526,32 @@ def get_project_settings(
     cat_key = category.lower()
     proj_info = projects_meta.get(category, {}) or projects_meta.get(cat_key, {})
 
-    cls_data = classes_map.get(cat_key) or classes_map.get(category)
+    # Cloudflare D1'deki proje ayarları ve sınıfları her zaman birincil kaynak (Railway yeniden başlasa da kaybolmaz)
+    cls_data = None
+    if d1_proj:
+        if d1_proj.get("display_name") and not proj_info.get("display_name"):
+            proj_info = dict(proj_info)
+            proj_info["display_name"] = d1_proj.get("display_name")
+        if d1_proj.get("description") and not proj_info.get("description"):
+            proj_info = dict(proj_info)
+            proj_info["description"] = d1_proj.get("description")
+        if d1_proj.get("visibility"):
+            proj_info = dict(proj_info)
+            proj_info["visibility"] = d1_proj.get("visibility")
+        if d1_proj.get("project_type"):
+            proj_info = dict(proj_info)
+            proj_info["project_type"] = d1_proj.get("project_type")
+        if d1_proj.get("classes_json"):
+            try:
+                import json as _json
+                parsed_cls = _json.loads(d1_proj["classes_json"])
+                if isinstance(parsed_cls, list) and len(parsed_cls) > 0:
+                    cls_data = parsed_cls
+            except Exception:
+                pass
+
+    if not cls_data:
+        cls_data = classes_map.get(cat_key) or classes_map.get(category)
     if not cls_data:
         if cat_key == "bag":
             cls_data = classes_map.get("bag_detection_project")
