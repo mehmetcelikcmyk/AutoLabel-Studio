@@ -44,6 +44,19 @@ def _review_file(category: str) -> Path:
 
 def _load_reviews(category: str) -> Dict[str, Any]:
     p = _review_file(category)
+    if not p.exists():
+        # Railway yeniden başlasa da inceleme kayıtlarını Cloudflare R2'den geri yükle
+        try:
+            from core.database import cf_r2_get_object
+            from api.shared.utils import get_project_storage_info
+            st = get_project_storage_info(category)
+            if st.get("r2_configured"):
+                raw = cf_r2_get_object(f"{st['r2_project_prefix']}/reviews.json")
+                if raw:
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    p.write_bytes(raw)
+        except Exception:
+            pass
     if p.exists():
         try:
             with open(p, "r", encoding="utf-8") as f:
@@ -56,8 +69,17 @@ def _load_reviews(category: str) -> Dict[str, Any]:
 def _save_reviews(category: str, data: Dict[str, Any]):
     p = _review_file(category)
     p.parent.mkdir(parents=True, exist_ok=True)
+    raw_str = json.dumps(data, ensure_ascii=False, indent=2)
     with open(p, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.write(raw_str)
+    try:
+        from core.database import cf_r2_upload
+        from api.shared.utils import get_project_storage_info
+        st = get_project_storage_info(category)
+        if st.get("r2_configured"):
+            cf_r2_upload(raw_str.encode("utf-8"), f"{st['r2_project_prefix']}/reviews.json", "application/json")
+    except Exception:
+        pass
 
 
 @router.post("/api/projects/complete-batch")

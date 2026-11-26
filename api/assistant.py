@@ -219,12 +219,28 @@ def agent_suggest(req: AgentSuggestRequest, authorization: Optional[str] = Heade
 
             folder_slug = re.sub(r'[^a-z0-9_]', '_', bp_data.get("name", "custom_project").lower()).strip('_')
             classes = []
-            palette = ["#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4"]
+            import colorsys
+            base_palette = [
+                "#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4",
+                "#ef4444", "#84cc16", "#f97316", "#14b8a6", "#a855f7", "#eab308",
+                "#0ea5e9", "#22c55e", "#e11d48", "#6366f1", "#d946ef", "#0284c7",
+            ]
+            used_colors = set()
             for idx, c in enumerate(bp_data.get("classes", [])):
+                raw_col = (c.get("color") or "").strip().lower()
+                if not raw_col or not re.match(r'^#[0-9a-f]{6}$', raw_col) or raw_col in used_colors:
+                    if idx < len(base_palette) and base_palette[idx] not in used_colors:
+                        raw_col = base_palette[idx]
+                    else:
+                        # Altın açı ile her sınıf için görsel olarak belirgin benzersiz renk üret
+                        hue = (idx * 0.618033988749895) % 1.0
+                        r, g, b = colorsys.hls_to_rgb(hue, 0.58, 0.82)
+                        raw_col = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+                used_colors.add(raw_col)
                 classes.append({
                     "id": idx,
                     "name": c.get("name", f"Class_{idx}"),
-                    "color": c.get("color", palette[idx % len(palette)]),
+                    "color": raw_col,
                     "prompts": c.get("prompts", [c.get("name", "").lower()])
                 })
 

@@ -322,6 +322,19 @@ def create_project(req: CreateProjectRequest, authorization: Optional[str] = Hea
                 detail=f"Maksimum proje sınırına ulaştınız ({user_proj_count}/{MAX_PROJECTS_PER_USER}). Yeni proje oluşturmak için mevcut projelerinizden birini silebilirsiniz."
             )
 
+    # Yeni açılan proje D1'de yoksa, daha önce aynı isimle silinmiş projeden kalma sahipsiz yığın ve R2 dosyalarını temizle
+    try:
+        existing_d1 = cf_d1_query("SELECT id FROM projects WHERE id = ? LIMIT 1", [folder_name])
+        if not existing_d1:
+            cf_d1_query("DELETE FROM project_batches WHERE project_id = ?", [folder_name])
+            from api.shared.utils import get_project_storage_info
+            st_clean = get_project_storage_info(folder_name)
+            cf_r2_delete_prefix(st_clean["r2_project_prefix"])
+            if st_clean["r2_project_prefix"].strip("/") != folder_name.strip("/"):
+                cf_r2_delete_prefix(folder_name)
+    except Exception as clean_err:
+        print(f"[Create Project Clean-Slate Warning] {clean_err}")
+
     proj_dir = safe_project_path(folder_name)
     labeled_dir = safe_project_path(f"{folder_name}_labeled")
     labels_dir = labeled_dir / "labels"
@@ -357,13 +370,29 @@ def create_project(req: CreateProjectRequest, authorization: Optional[str] = Hea
     }
 
     if req.classes:
+        import colorsys
         cls_list = req.classes if isinstance(req.classes, list) else [req.classes]
+        base_palette = [
+            "#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4",
+            "#ef4444", "#84cc16", "#f97316", "#14b8a6", "#a855f7", "#eab308",
+            "#0ea5e9", "#22c55e", "#e11d48", "#6366f1", "#d946ef", "#0284c7",
+        ]
+        used_cols = set()
         normalized = []
         for i, cls in enumerate(cls_list):
+            raw_col = (cls.get("color") or "").strip().lower()
+            if not raw_col or not re.match(r'^#[0-9a-f]{6}$', raw_col) or raw_col in used_cols:
+                if i < len(base_palette) and base_palette[i] not in used_cols:
+                    raw_col = base_palette[i]
+                else:
+                    hue = (i * 0.618033988749895) % 1.0
+                    r, g, b = colorsys.hls_to_rgb(hue, 0.58, 0.82)
+                    raw_col = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+            used_cols.add(raw_col)
             normalized.append({
                 "id": i,
                 "name": cls.get("name", f"Class_{i}"),
-                "color": cls.get("color", ["#3b82f6","#10b981","#f59e0b","#ec4899","#8b5cf6","#06b6d4","#f97316"][i % 7]),
+                "color": raw_col,
                 "prompts": cls.get("prompts") or [cls.get("name", f"class_{i}").lower()],
             })
         config.setdefault("classes", {})[folder_name] = normalized

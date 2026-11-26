@@ -2149,9 +2149,11 @@ def delete_team(req: DeleteTeamRequest, authorization: Optional[str] = Header(No
 
     team_name = team.get("name", "Bilinmeyen Takım")
 
-    # Cloudflare D1'den sil
+    # Cloudflare D1'den takımı ve ilişkili çalışma alanı / görev kayıtlarını temizle
     try:
         cf_d1_query("DELETE FROM teams WHERE id = ?", [req.team_id])
+        cf_d1_query("DELETE FROM workspaces WHERE id = ?", [f"ws_team_{req.team_id}"])
+        cf_d1_query("DELETE FROM team_tasks WHERE team_id = ?", [req.team_id])
     except Exception as e:
         print(f"[D1 Delete Team Error] {e}")
         raise HTTPException(status_code=500, detail="Takım veritabanından silinirken hata oluştu.")
@@ -2185,6 +2187,8 @@ def restore_labels_snapshot(req: RestoreSnapshotRequest, authorization: Optional
 
     if not category or not snapshot_id:
         raise HTTPException(status_code=400, detail="Kategori ve snapshot kimliği zorunludur.")
+    from core.security import check_project_permission
+    check_project_permission(category, authorization, require_edit=True, require_owner=True)
 
     target_snap_dir = SNAPSHOTS_DIR / snapshot_id
     snap_labels_dir = target_snap_dir / "labels"
