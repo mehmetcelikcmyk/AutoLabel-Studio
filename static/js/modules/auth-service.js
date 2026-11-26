@@ -51,7 +51,7 @@
 
       // 1. Timeout Policy: Default 20s for standard requests, 60s for model inference/batch exports
       let initOptions = args[1] ? { ...args[1] } : {};
-      const timeoutMs = url.includes('/api/ai/') || url.includes('/export-') ? 60000 : 20000;
+      const timeoutMs = url.includes('/api/ai/') || url.includes('/api/agent/') || url.includes('/export-') ? 60000 : 20000;
       if (!initOptions.signal && typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
         initOptions.signal = AbortSignal.timeout(timeoutMs);
       }

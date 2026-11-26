@@ -70,17 +70,19 @@ def call_openai_llm(user_prompt: str, image_bytes: Optional[bytes] = None) -> Op
             req_data = json.dumps({
                 "model": "gpt-4o-mini",
                 "messages": [{"role": "user", "content": msg_content}],
-                "max_tokens": 1024
+                "max_tokens": 4096
             }).encode("utf-8")
 
             req = _urllib_req.Request(url, data=req_data, headers={
                 "Authorization": f"Bearer {key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "User-Agent": "AutoLabel-Studio/2.0"
             })
-            with _urllib_req.urlopen(req, timeout=14) as resp:
+            with _urllib_req.urlopen(req, timeout=45) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data["choices"][0]["message"]["content"]
-        except Exception:
+        except Exception as e:
+            print(f"[OpenAI Warning] {e}")
             continue
     return None
 
@@ -99,14 +101,15 @@ def call_groq_llm(user_prompt: str) -> Optional[str]:
             req_data = json.dumps({
                 "model": "llama-3.3-70b-versatile",
                 "messages": [{"role": "user", "content": user_prompt}],
-                "max_tokens": 1500
+                "max_tokens": 4096
             }).encode("utf-8")
 
             req = _urllib_req.Request(url, data=req_data, headers={
                 "Authorization": f"Bearer {key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "User-Agent": "AutoLabel-Studio/2.0"
             })
-            with _urllib_req.urlopen(req, timeout=20) as resp:
+            with _urllib_req.urlopen(req, timeout=25) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data["choices"][0]["message"]["content"]
         except Exception as e:
@@ -148,17 +151,18 @@ def query_multi_ai_chat(prompt: str, image_bytes: Optional[bytes] = None, histor
     else:
         full_prompt = f"{system_instruction}\n\nKullanıcı: {prompt}"
 
-    res = call_gemini_llm(full_prompt, image_bytes)
-    if res:
-        return res, "Google Gemini 2.5 Flash"
-
     res = call_openai_llm(full_prompt, image_bytes)
     if res:
         return res, "OpenAI GPT-4o Mini"
 
-    res = call_groq_llm(full_prompt)
+    if not image_bytes:
+        res = call_groq_llm(full_prompt)
+        if res:
+            return res, "Groq Llama 3.3 70B"
+
+    res = call_gemini_llm(full_prompt, image_bytes)
     if res:
-        return res, "Groq Llama 3.3 70B"
+        return res, "Google Gemini 2.5 Flash"
 
     return None, "local_ai"
 
