@@ -25,17 +25,13 @@ if %errorlevel% neq 0 (
     echo.
 )
 
-:: Mevcut portu bul (8000'den basla)
-echo  [*] Port kontrol ediliyor...
+:: Port 8000'i garantile
+echo  [*] Port 8000 kontrol ediliyor...
 set PORT=8000
 
-netstat -an 2>nul | find ":%PORT% " | find "LISTENING" >nul 2>&1
-if %errorlevel% equ 0 (
-    set PORT=8001
-    netstat -an 2>nul | find ":8001 " | find "LISTENING" >nul 2>&1
-    if %errorlevel% equ 0 (
-        set PORT=8002
-    )
+for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| findstr ":8000 " ^| findstr "LISTENING"') do (
+    echo  [!] Port 8000 mesgul ^(PID: %%a^), eski surec sonlandiriliyor...
+    taskkill /F /PID %%a >nul 2>&1
 )
 
 echo  [OK] Port %PORT% kullanilacak.
@@ -46,9 +42,4 @@ echo.
 
 :: Uygulamayi baslat
 python app.py --port %PORT%
-if %errorlevel% neq 0 (
-    echo.
-    echo  [HATA] Uygulama baslatilirken bir hata olustu.
-    echo  Lutfen once kur.bat dosyasini calistirip bagimliliklari kurun.
-    pause
-)
+

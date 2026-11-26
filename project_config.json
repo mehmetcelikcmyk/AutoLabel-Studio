@@ -1,41 +1,29 @@
 {
   "projects": {
-    "bag_detection_project": {
-      "display_name": "Bag Detection Project",
-      "description": "Tüm çanta çeşitlerini (sırt çantası, el çantası, valiz vb.) tek bir sınıf altında tespit eden görüntü işleme projesi.",
-      "visibility": "private",
-      "owner_email": "admin",
-      "license": "CC BY 4.0",
-      "project_type": "detection",
-      "ai_settings": {
-        "conf": 0.15,
-        "iou": 0.5
-      },
-      "model_key": "yolov8s-worldv2"
-    },
-    "bag": {
-      "display_name": "bag",
-      "description": "",
-      "visibility": "private",
-      "owner_email": "admin",
-      "ai_settings": {
-        "conf": 0.25,
-        "iou": 0.45
-      },
-      "model_key": "yolov8s-worldv2"
-    },
-    "accessory_detection_project": {
-      "display_name": "accessory_detection_project",
-      "description": "accessory_detection_project nesne tespit projesi",
+    "elif_in_g_rselleri": {
+      "display_name": "Elif'in görselleri",
+      "description": "Elif'in görselleri nesne tespit projesi",
       "visibility": "public",
       "license": "CC BY 4.0",
       "project_type": "detection",
-      "owner_email": "test@example.com",
+      "owner_email": "elifyil.dirim0454@gmail.com",
       "ai_settings": {
         "conf": 0.15,
         "iou": 0.5
-      },
-      "model_key": "yolov8s-worldv2"
+      }
+    },
+    "g_rsel_label_kontrol": {
+      "display_name": "Görsel Label Kontrolü",
+      "description": "Görseller üzerindeki etiketlerin, barkodların, metin alanlarının ve logoların otomatik tespiti ve kontrolü projesi.",
+      "visibility": "public",
+      "license": "CC BY 4.0",
+      "project_type": "detection",
+      "owner_email": "ahmetcaglararslantas@gmail.com",
+      "workspace_id": "ws_91141c89ddbd",
+      "ai_settings": {
+        "conf": 0.15,
+        "iou": 0.5
+      }
     }
   },
   "classes": {
@@ -108,42 +96,123 @@
         "wrist watch"
       ]
     },
-    "bag_detection_project": [
+    "giyim_ve_aksesuar_tespiti_projesi": [
       {
         "id": 0,
-        "name": "Bag",
-        "color": "#f59e0b",
+        "name": "Necklace",
+        "color": "#eab308",
         "prompts": [
-          "bag",
-          "backpack",
-          "handbag",
-          "purse",
-          "luggage",
-          "suitcase",
-          "duffel bag",
-          "tote bag"
+          "necklace",
+          "pendant",
+          "chain jewelry"
         ]
-      }
-    ],
-    "bag": [
+      },
       {
-        "id": 0,
-        "name": "BAG",
+        "id": 1,
+        "name": "Watch",
+        "color": "#06b6d4",
+        "prompts": [
+          "watch",
+          "wristwatch"
+        ]
+      },
+      {
+        "id": 2,
+        "name": "Scarf",
+        "color": "#ec4899",
+        "prompts": [
+          "scarf",
+          "neck scarf"
+        ]
+      },
+      {
+        "id": 3,
+        "name": "Gloves",
+        "color": "#8b5cf6",
+        "prompts": [
+          "gloves",
+          "glove",
+          "pair of gloves"
+        ]
+      },
+      {
+        "id": 4,
+        "name": "Belt",
+        "color": "#f97316",
+        "prompts": [
+          "belt",
+          "waist belt"
+        ]
+      },
+      {
+        "id": 5,
+        "name": "Tie",
+        "color": "#ef4444",
+        "prompts": [
+          "tie",
+          "necktie"
+        ]
+      },
+      {
+        "id": 6,
+        "name": "Bag",
         "color": "#10b981",
         "prompts": [
           "bag",
-          "çanta",
-          "bag"
+          "handbag",
+          "purse"
         ]
       }
     ],
-    "accessory_detection_project": [
+    "elif_in_g_rselleri": [
       {
         "id": 0,
         "name": "Object",
         "color": "#3b82f6",
         "prompts": [
           "object"
+        ]
+      }
+    ],
+    "g_rsel_label_kontrol": [
+      {
+        "id": 0,
+        "name": "Etiket",
+        "color": "#3b82f6",
+        "prompts": [
+          "label",
+          "sticker",
+          "tag",
+          "product label"
+        ]
+      },
+      {
+        "id": 1,
+        "name": "Barkod",
+        "color": "#10b981",
+        "prompts": [
+          "barcode",
+          "qr code"
+        ]
+      },
+      {
+        "id": 2,
+        "name": "Metin",
+        "color": "#f59e0b",
+        "prompts": [
+          "text block",
+          "printed text",
+          "label text"
+        ]
+      },
+      {
+        "id": 3,
+        "name": "Logo",
+        "color": "#ef4444",
+        "prompts": [
+          "brand logo",
+          "logo",
+          "symbol"
         ]
       }
     ]

@@ -1,0 +1,1392 @@
+@media (max-width: 768px) {
+
+  /* ── GENEL ─────────────────────────────────────────── */
+  html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+    -webkit-text-size-adjust: 100% !important;
+  }
+
+  /* ── LANDING DECK: MOBİLDE NORMAL SCROLL SAYFASI ─── */
+  /* Deck viewport scrollable olur, slide'lar üst üste değil alt alta */
+  .landing-deck-viewport {
+    height: auto !important;
+    overflow: visible !important;
+    padding-top: 56px !important;
+  }
+
+  .landing-deck-track {
+    display: block !important;  /* flex → block; transform animasyonu iptal */
+    height: auto !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  /* Tüm slide'lar görünür: aktif olmayan fade yoktur */
+  .landing-deck-slide {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+    transition: none !important;
+    position: static !important;
+  }
+
+  /* Animasyonları devre dışı bırak (mobil pili tüketir) */
+  .landing-deck-slide.active .deck-anim-stagger-1,
+  .landing-deck-slide.active .deck-anim-stagger-2,
+  .landing-deck-slide.active .deck-anim-stagger-3,
+  .landing-deck-slide.active .deck-anim-stagger-4,
+  .landing-deck-slide.active .features-grid .feature-card,
+  .landing-deck-slide.active .usecases-grid .usecase-card {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Scrollable wrapper yüksekliği serbest bırak */
+  .landing-slide-scrollable {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Slide scrollbar gizle */
+  .landing-slide-scrollable::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Landing view tamamını scroll'a aç */
+  #landingView.landing-view {
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100vh !important;
+  }
+
+  /* ── LANDING NAVBAR ──────────────────────────────── */
+  .landing-nav {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1000 !important;
+  }
+
+  .landing-nav-inner {
+    padding: 0 16px !important;
+    height: 56px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .landing-nav-links { display: none !important; }
+  .landing-nav-cta { display: none !important; }
+  .landing-mobile-menu-btn { 
+    display: flex !important; 
+    margin-left: auto !important;
+  }
+
+  /* ── HERO ───────────────────────────────────────── */
+  .landing-hero {
+    padding: 28px 16px 20px !important;
+    min-height: auto !important;
+  }
+
+  .landing-hero-inner {
+    flex-direction: column !important;
+    gap: 20px !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+  }
+
+  .hero-left { width: 100% !important; max-width: 100% !important; }
+  .hero-right { width: 100% !important; max-width: 100% !important; display: block !important; }
+
+  .hero-title {
+    font-size: clamp(1.6rem, 7vw, 2.2rem) !important;
+    line-height: 1.15 !important;
+    letter-spacing: -0.5px !important;
+  }
+
+  .hero-title-gradient { display: inline !important; }
+
+  .hero-subtitle {
+    font-size: 0.88rem !important;
+    line-height: 1.6 !important;
+    margin-top: 10px !important;
+    max-width: 100% !important;
+  }
+
+  .hero-badge-row {
+    flex-wrap: wrap !important;
+    gap: 5px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .hero-badge {
+    font-size: 0.68rem !important;
+    padding: 3px 8px !important;
+  }
+
+  .hero-cta-row {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+    margin-top: 16px !important;
+  }
+
+  .btn-hero-primary,
+  .btn-hero-secondary {
+    width: 100% !important;
+    justify-content: center !important;
+    font-size: 0.95rem !important;
+    padding: 14px 20px !important;
+  }
+
+  .hero-trust-row {
+    flex-direction: column !important;
+    gap: 4px !important;
+    align-items: flex-start !important;
+    margin-top: 12px !important;
+  }
+
+  .hero-trust-item {
+    font-size: 0.75rem !important;
+  }
+
+  /* Demo mockup tam genişlik ve responsive yerleşim */
+  .hero-demo-mockup {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 16px 0 0 0 !important;
+    padding: 0 !important;
+    animation: none !important; /* Mobilde taşmayı ve titremeyi önler */
+  }
+
+  .modern-studio-window,
+  .demo-window {
+    border-radius: 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  .demo-window-bar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    padding: 8px 12px !important;
+    min-height: 42px !important;
+    box-sizing: border-box !important;
+  }
+
+  .demo-dots-group {
+    display: flex !important;
+    gap: 5px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .demo-window-controls { display: none !important; }
+
+  .demo-slide-tabs-nav {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    overflow-x: auto !important;
+    flex: 1 !important;
+    justify-content: center !important;
+    padding: 2px 4px !important;
+    margin: 0 !important;
+  }
+
+  .demo-slide-tabs-nav::-webkit-scrollbar { display: none !important; }
+
+  .demo-tab-btn {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  .demo-tab-btn span:last-child {
+    display: none !important; /* Sadece 1, 2, 3 numaraları göster sığması için */
+  }
+
+  .demo-tab-btn .tab-indicator-num {
+    margin: 0 !important;
+  }
+
+  .demo-window-status-pill {
+    font-size: 10px !important;
+    padding: 3px 8px !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+  /* ── FEATURES GRID ──────────────────────────────── */
+  /* minmax(280px) 390px ekranda 2 sütuna sığmaz — tek sütun */
+  .features-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* span 2 mobilde yoktur (tek sütun) */
+  .feature-card-primary {
+    grid-column: span 1 !important;
+  }
+
+  .feature-card {
+    padding: 18px !important;
+  }
+
+  /* ── LANDING SECTIONS ───────────────────────────── */
+  .landing-section,
+  .landing-section-inner {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .landing-section-badge {
+    font-size: 0.7rem !important;
+    padding: 4px 10px !important;
+  }
+
+  .landing-section-title {
+    font-size: clamp(1.4rem, 5.5vw, 1.9rem) !important;
+    line-height: 1.2 !important;
+  }
+
+  .landing-section-sub {
+    font-size: 0.85rem !important;
+    line-height: 1.6 !important;
+  }
+
+  /* ── HOW IT WORKS ───────────────────────────────── */
+  .how-steps {
+    flex-direction: column !important;
+    gap: 14px !important;
+  }
+
+  .how-step-arrow {
+    display: none !important;
+  }
+
+  .how-step {
+    width: 100% !important;
+    text-align: left !important;
+  }
+
+  .how-step-num {
+    font-size: 1.8rem !important;
+  }
+
+  /* ── STATS GRID ────────────────────────────────── */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .stat-card {
+    padding: 16px !important;
+  }
+
+  .stat-number {
+    font-size: clamp(1.6rem, 8vw, 2.4rem) !important;
+  }
+
+  /* ── SHOWCASE ──────────────────────────────────── */
+  .showcase-row {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .showcase-text, .showcase-visual {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .showcase-code-block {
+    font-size: 11px !important;
+    padding: 12px !important;
+    overflow-x: auto !important;
+  }
+
+  /* ── USE CASES ─────────────────────────────────── */
+  .usecases-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .usecase-card {
+    padding: 16px !important;
+  }
+
+  /* ── PRICING ───────────────────────────────────── */
+  .pricing-card-single {
+    padding: 24px 18px !important;
+  }
+
+  .pricing-features-list {
+    column-count: 1 !important;
+  }
+
+  /* ── FINAL CTA ─────────────────────────────────── */
+  .final-cta-section {
+    padding: 40px 16px !important;
+  }
+
+  .final-cta-title {
+    font-size: clamp(1.4rem, 5.5vw, 1.8rem) !important;
+  }
+
+  .final-cta-buttons {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+    max-width: 340px !important;
+    margin: 0 auto !important;
+  }
+
+  .final-cta-buttons .btn-hero-primary,
+  .final-cta-buttons .btn-hero-secondary {
+    width: 100% !important;
+  }
+
+  /* ── FOOTER ────────────────────────────────────── */
+  .landing-footer {
+    padding: 20px 16px !important;
+  }
+
+  .footer-inner {
+    flex-direction: column !important;
+    gap: 12px !important;
+    text-align: center !important;
+  }
+
+  .footer-links {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 10px !important;
+  }
+
+  .footer-brand { justify-content: center !important; }
+
+  /* ── AUTH ──────────────────────────────────────── */
+  .auth-view {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: 100dvh !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .auth-left {
+    width: 100% !important;
+    min-height: auto !important;
+    max-height: none !important;
+    height: auto !important;
+    padding: 14px 16px 10px !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .auth-left-inner {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    padding: 0 !important;
+    width: auto !important;
+  }
+
+  .auth-brand-area {
+    margin-bottom: 0 !important;
+    padding: 4px 6px !important;
+    margin-left: 0 !important;
+  }
+
+  .auth-left-headline {
+    display: none !important;
+  }
+
+  .auth-feature-list {
+    display: none !important;
+  }
+
+  .auth-right {
+    width: 100% !important;
+    flex: 1 !important;
+    padding: 16px 14px 40px !important;
+    min-height: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    overflow-y: visible !important;
+    box-sizing: border-box !important;
+  }
+
+  .auth-form-card {
+    width: 100% !important;
+    max-width: 480px !important;
+    padding: 20px 18px 20px !important;
+    border-radius: 16px !important;
+    margin: 0 auto !important; /* Üstten kesilmesini önler */
+    flex-shrink: 0 !important;
+  }
+
+  .auth-mobile-header {
+    display: flex !important;
+  }
+
+  .auth-mobile-brand {
+    cursor: pointer !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  .auth-mobile-brand:active {
+    transform: scale(0.96) !important;
+  }
+
+  .auth-mobile-brand:hover {
+    background: rgba(56, 189, 248, 0.08) !important;
+  }
+
+  .auth-form-title {
+    font-size: 1.45rem !important;
+    margin-bottom: 4px !important;
+    line-height: 1.2 !important;
+  }
+
+  .auth-form-sub {
+    font-size: 0.82rem !important;
+    margin-bottom: 14px !important;
+  }
+
+  /* Canvas AI animasyonu mobilde de aktif ve arka planda kalsın */
+  .auth-canvas {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+    opacity: 0.85 !important;
+  }
+
+  /* ── APP SHELL ─────────────────────────────────── */
+  #mainAppShell,
+  .app-shell {
+    flex-direction: column !important;
+    overflow-x: hidden !important;
+    height: 100dvh !important;
+  }
+
+  /* ── GLOBAL SIDEBAR & TOPBAR (Clean Mobile App Header) ── */
+  #globalSidebar,
+  .global-sidebar {
+    width: 100% !important;
+    max-width: 100vw !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    padding: 0 16px !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    background: rgba(10, 15, 29, 0.95) !important;
+    backdrop-filter: blur(16px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  #globalSidebar .ws-sidebar-header {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    border-bottom: none !important;
+  }
+
+  .ws-brand-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .ws-brand-row > div:first-child {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .ws-brand-logo {
+    width: 28px !important;
+    height: 28px !important;
+    max-width: 28px !important;
+    max-height: 28px !important;
+    border-radius: 6px !important;
+    margin: 0 !important;
+  }
+
+  .ws-brand-text {
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .ws-brand-name {
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.01em !important;
+    white-space: nowrap !important;
+  }
+
+  /* Hamburger butonu: Zarif ve tam sağ köşede */
+  .btn-mobile-nav-toggle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #f8fafc !important;
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+    margin-left: auto !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .btn-mobile-nav-toggle:active {
+    background: rgba(59, 130, 246, 0.2) !important;
+    transform: scale(0.94);
+  }
+
+  /* Workspace seçici kapalı */
+  #globalSidebar .ws-selector-box {
+    display: none !important;
+  }
+
+  /* Nav menüsü kapalı */
+  #globalSidebar .ws-nav-menu {
+    display: none !important;
+    flex-direction: column !important;
+    padding: 8px 0 !important;
+    gap: 4px !important;
+  }
+
+  /* Nav item */
+  #globalSidebar .ws-nav-item {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    border-radius: 10px !important;
+    padding: 10px 14px !important;
+    font-size: 13.5px !important;
+    font-weight: 500 !important;
+    gap: 12px !important;
+    white-space: nowrap !important;
+    background: transparent !important;
+    margin: 0 !important;
+  }
+
+  #globalSidebar .ws-nav-item:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  #globalSidebar .ws-nav-item.active {
+    background: rgba(59, 130, 246, 0.14) !important;
+    color: #60a5fa !important;
+  }
+
+  #globalSidebar .ws-sidebar-bottom {
+    display: none !important;
+    padding: 10px 0 16px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    margin-top: 6px !important;
+  }
+  /* HAMBURGER AÇILDIĞINDA MENÜ PANELİ (DRAWER OVERLAY) */
+  #globalSidebar.mobile-menu-open {
+    height: auto !important;
+    max-height: 88vh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(59, 130, 246, 0.25) !important;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.35) !important;
+    z-index: 1000 !important;
+    padding-bottom: 16px !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-sidebar-header {
+    height: auto !important;
+    min-height: auto !important;
+    flex-shrink: 0 !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-brand-row {
+    height: 52px !important;
+    min-height: 52px !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-selector-box {
+    display: flex !important;
+    margin: 8px 0 10px !important;
+    padding: 9px 12px !important;
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-nav-menu {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 6px !important;
+    padding: 6px 0 !important;
+    overflow: visible !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-nav-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    padding: 10px 14px !important;
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.04) !important;
+    gap: 12px !important;
+    text-align: left !important;
+    cursor: pointer !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-nav-item:hover,
+  #globalSidebar.mobile-menu-open .ws-nav-item:active {
+    background: rgba(59, 130, 246, 0.12) !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-nav-item.active {
+    background: rgba(59, 130, 246, 0.2) !important;
+    border-color: rgba(59, 130, 246, 0.4) !important;
+    color: #60a5fa !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-nav-item .ws-nav-text,
+  .global-sidebar.compact#globalSidebar.mobile-menu-open .ws-nav-text {
+    display: inline-block !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    color: #f1f5f9 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-nav-item svg {
+    flex-shrink: 0 !important;
+    stroke: currentColor !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-nav-count,
+  .global-sidebar.compact#globalSidebar.mobile-menu-open .ws-nav-count {
+    display: inline-block !important;
+    margin-left: auto !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-nav-badge-new,
+  .global-sidebar.compact#globalSidebar.mobile-menu-open .ws-nav-badge-new {
+    display: inline-block !important;
+    margin-left: auto !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-sidebar-bottom {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+    padding-top: 12px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-user-row,
+  .global-sidebar.compact#globalSidebar.mobile-menu-open .ws-user-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    padding: 8px 10px !important;
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-user-meta,
+  .global-sidebar.compact#globalSidebar.mobile-menu-open .ws-user-meta {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    text-align: left !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-credit-card-widget {
+    display: block !important;
+  }
+
+  #globalSidebar.mobile-menu-open .ws-credit-compact-wrap {
+    display: none !important;
+  }
+
+  /* ── ANA İÇERİK ────────────────────────────────── */
+  #mainWorkspaceContent,
+  .main-workspace-content {
+    width: 100% !important;
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 12px !important;
+    min-height: 0 !important;
+  }
+
+  .workspace-view,
+  .projects-view-container,
+  .ws-view-header,
+  .assets-view-container {
+    width: 100% !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Admin Konsolu & Genel Sayfa Başlıkları (Mobilde Dikey Hizalanma & Sıkışmayı Önleme) */
+  .view-content-header {
+    padding: 16px 14px 12px !important;
+  }
+
+  .view-header-title-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .view-header-title-row > div:first-child {
+    width: 100% !important;
+  }
+
+  .view-header-title-row h2 {
+    font-size: 1.25rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .view-header-title-row .admin-badge-pill {
+    font-size: 0.62rem !important;
+    padding: 2px 7px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .view-subtitle {
+    font-size: 0.78rem !important;
+    margin-top: 4px !important;
+    line-height: 1.35 !important;
+  }
+
+  /* Verileri Yenile Butonu (Mobilde Tam Oturma & Kırılmayı Önleme) */
+  #adminRefreshAllBtn,
+  .view-header-actions .btn-primary {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 9px 16px !important;
+    font-size: 0.85rem !important;
+    white-space: nowrap !important;
+    border-radius: 10px !important;
+  }
+
+  /* Admin Konsolu Sekme Çubuğu (Yatay Parmakla Kaydırma & Rahat Dokunma) */
+  .admin-subnav-bar {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    padding: 6px 8px !important;
+    margin-top: 10px !important;
+    scrollbar-width: none !important;
+  }
+
+  .admin-subnav-bar::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .admin-tab-btn {
+    padding: 7px 12px !important;
+    font-size: 0.78rem !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  /* ── PROJELER ──────────────────────────────────── */
+  .projects-grid,
+  .categories-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .ws-view-header-top {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .ws-view-title {
+    font-size: 1.1rem !important;
+  }
+
+  .btn-create-project {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* ── STAT KARTLARI ─────────────────────────────── */
+  .stat-cards-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .dash-stat-card {
+    padding: 12px !important;
+  }
+
+  .dash-stat-val {
+    font-size: 1.4rem !important;
+  }
+
+  /* ── GÖRSEL HAVUZU ─────────────────────────────── */
+  .assets-gallery-wrap,
+  .dataset-grid,
+  .media-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  /* ── AI ASİSTAN ────────────────────────────────── */
+  .agent-view-container,
+  .agent-chat-container {
+    width: 100% !important;
+    padding: 8px 4px !important;
+    max-width: 100% !important;
+  }
+
+  .agent-greeting-title {
+    font-size: 1.2rem !important;
+    text-align: center !important;
+  }
+
+  .agent-hero-sub {
+    font-size: 0.82rem !important;
+    text-align: center !important;
+  }
+
+  .agent-cards-grid,
+  .agent-presets-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .agent-composer-box,
+  .agent-input-container {
+    width: 100% !important;
+  }
+
+  /* ── ARAMA / FİLTRE ARAÇLARI ───────────────────── */
+  .table-toolbar,
+  .filter-toolbar-row {
+    flex-direction: column !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+
+  .table-search-input,
+  .filter-select {
+    width: 100% !important;
+  }
+
+  /* ── MODEL EĞİTİM ──────────────────────────────── */
+  .train-layout-grid,
+  .models-grid,
+  .export-options-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* ── AYARLAR ───────────────────────────────────── */
+  .settings-layout-container {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .ws-settings-subnav {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 8px 10px !important;
+    margin-bottom: 8px !important;
+    background: rgba(15, 23, 42, 0.7) !important;
+    border-radius: 12px !important;
+  }
+
+  .ws-settings-group-title {
+    display: none !important;
+  }
+
+  .ws-settings-nav-group {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 6px !important;
+    padding: 4px 0 !important;
+  }
+
+  .ws-settings-nav-group::-webkit-scrollbar { display: none !important; }
+
+  .ws-settings-nav-item {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    width: auto !important;
+    padding: 8px 14px !important;
+    font-size: 0.8rem !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  .ws-settings-main,
+  .ws-settings-panel,
+  .settings-tab-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .ws-settings-card {
+    padding: 16px 14px !important;
+    border-radius: 14px !important;
+  }
+
+  /* ── HUB TABS (Eğitim, Modeller, Takım, Dışa Aktarma) ── */
+  .hub-tab-panel,
+  .hub-main-viewport,
+  #hubTabTrain,
+  #hubTabModels,
+  #hubTabTeam,
+  #hubTabDataset,
+  #hubTabSettings {
+    padding: 14px 12px !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+  }
+
+  .hub-panel-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .hub-panel-header > div:first-child {
+    width: 100% !important;
+  }
+
+  .hub-panel-header h2 {
+    font-size: 1.22rem !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    line-height: 1.3 !important;
+  }
+
+  .hub-panel-header p {
+    font-size: 0.8rem !important;
+    line-height: 1.4 !important;
+  }
+
+  .hub-panel-header .btn-secondary,
+  .hub-panel-header .btn-primary,
+  #refreshTeamSyncBtn,
+  #openUploadModelBtn,
+  #refreshModelsBtn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 9px 14px !important;
+  }
+
+  /* Model & Playground Kartları Mobilde Tek Kolon */
+  #modelCardsContainer,
+  .model-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  #modelUploadForm {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  #modelUploadForm > div {
+    grid-column: 1 !important;
+  }
+
+  /* Canlı Playground Kontrolleri & Sonuç Alanı */
+  .settings-content-card div[style*="grid-template-columns:1fr 220px auto"],
+  .settings-content-card div[style*="grid-template-columns: 1fr 220px auto"] {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    padding: 14px 12px !important;
+  }
+
+  #pgUploadBtn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 11px !important;
+  }
+
+  #pgResultArea > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  /* Takım & Görev Yönetimi Mobilde Tek Kolon */
+  #hubTabTeam div[style*="display:flex"][style*="gap:6px"] {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .team-subnav-btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    padding: 7px 12px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .teams-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  #teamSubtabDispatch > div[style*="grid-template-columns"],
+  #teamDetailView div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    width: 100% !important;
+  }
+
+  #dispatchTaskForm div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  #dispatchDatasetStatsBanner {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+  }
+
+  /* AI Agent 1fr ızgara */
+  .agent-bottom-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .examples-card-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Train Tab 1fr */
+  #hubTabTrain div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    width: 100% !important;
+  }
+
+  /* ── ONBOARDING ────────────────────────────────── */
+  .ws-ob-container {
+    flex-direction: column !important;
+    height: auto !important;
+    overflow-y: auto !important;
+  }
+
+  .ws-ob-left {
+    width: 100% !important;
+    padding: 20px 16px !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .ws-ob-right { display: none !important; }
+
+  .ws-ob-plans {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .ws-ob-plan-card {
+    width: 100% !important;
+  }
+
+  /* ── MODAL VE DİALOGLAR ────────────────────────── */
+  .modal-overlay .modal-content,
+  .dialog-box {
+    width: calc(100vw - 24px) !important;
+    max-width: 96vw !important;
+    margin: 12px !important;
+    padding: 18px !important;
+    border-radius: 16px !important;
+  }
+
+  /* ── YÜZER PANELLER ────────────────────────────── */
+  #sidebarLeft,
+  .sidebar-left,
+  .modern-file-browser {
+    top: 8px !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 60px !important;
+    width: calc(100vw - 16px) !important;
+    max-width: none !important;
+    border-radius: 14px !important;
+  }
+
+  #sidebarRight,
+  .sidebar-right,
+  .modern-tabbed-sidebar {
+    top: 8px !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 60px !important;
+    width: calc(100vw - 16px) !important;
+    max-width: none !important;
+    border-radius: 14px !important;
+  }
+
+  /* ── YÜZER ARAÇ ÇUBUĞU ─────────────────────────── */
+  .floating-pill-toolbar {
+    top: auto !important;
+    bottom: 10px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: calc(100% - 16px) !important;
+    max-width: 400px !important;
+    height: 44px !important;
+    padding: 4px 10px !important;
+    overflow-x: auto !important;
+    border-radius: 24px !important;
+  }
+
+  .floating-pill-toolbar::-webkit-scrollbar { display: none !important; }
+
+  .floating-pill-toolbar .pill-btn {
+    height: 34px !important;
+    padding: 0 9px !important;
+    font-size: 11px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .floating-pill-toolbar .pill-btn kbd { display: none !important; }
+
+  /* ── GENEL TAŞMA VE KELİME KIRILMA DÜZELTMESİ ─── */
+*:not(.demo-slides-track):not(.demo-slide) {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-wrap: break-word;
+  }
+
+  /* Harf harf dikey parçalanmayı kesin olarak engelle */
+  h1, h2, h3, h4, h5, h6,
+  span, button, a, strong, p, label, div, select, input {
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
+  img, video, canvas, svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* ── TABLOLAR VE YATAY KAYDIRMA (HORIZONTAL SCROLL) ────────── */
+  .admin-table-wrap,
+  .admin-templates-table-wrap,
+  .table-responsive,
+  .data-table-container,
+  .ws-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    position: relative !important;
+    display: block !important;
+    margin-bottom: 16px !important;
+  }
+
+  .admin-data-table,
+  .admin-templates-table-wrap table,
+  table.data-table {
+    width: max-content !important;
+    min-width: 820px !important;
+    max-width: none !important;
+    table-layout: auto !important;
+  }
+
+  .admin-data-table th,
+  .admin-data-table td,
+  .admin-templates-table-wrap th,
+  .admin-templates-table-wrap td {
+    white-space: nowrap !important;
+    max-width: none !important;
+    padding: 10px 14px !important;
+  }
+
+  /* Hücre içi kullanıcı profili ve buton grubu taşma engeli */
+  .admin-user-cell {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    white-space: nowrap !important;
+    max-width: none !important;
+  }
+
+  .admin-data-table td:last-child {
+    white-space: nowrap !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 240px !important;
+  }
+
+  .admin-action-btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* ── TAKIM DAVET FORMU & KULLANICI DROPDOWN MOBİL UYUMU ── */
+  .team-invite-form {
+    flex-direction: column !important;
+    gap: 8px !important;
+    position: relative !important;
+  }
+
+  .team-invite-input-wrap {
+    width: 100% !important;
+    position: relative !important;
+  }
+
+  .team-invite-role-select {
+    width: 100% !important;
+    height: 38px !important;
+  }
+
+  .team-invite-submit-btn {
+    width: 100% !important;
+    height: 38px !important;
+    justify-content: center !important;
+  }
+
+  .team-invite-dropdown {
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    max-height: 220px !important;
+    box-sizing: border-box !important;
+    z-index: 9999 !important;
+  }
+}
+
+/* ── MASAÜSTÜNDE MOBİL ELEMENTLER GİZLİ ──────────── */
+@media (min-width: 769px) {
+  .btn-mobile-nav-toggle { display: none !important; }
+  .landing-mobile-menu-btn { display: none !important; }
+  .landing-mobile-dropdown { display: none !important; }
+}
+
+/* ── TABLET (481px–768px) ─────────────────────────── */
+@media (min-width: 481px) and (max-width: 768px) {
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .feature-card-primary {
+    grid-column: span 2 !important;
+  }
+  .projects-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .hero-title {
+    font-size: clamp(1.8rem, 5vw, 2.4rem) !important;
+  }
+  .auth-form-card {
+    max-width: 540px !important;
+  }
+}
+
+/* ── TABLET YATAY (landscape, ≤1024px) ──────────── */
+@media (max-width: 1024px) and (orientation: landscape) and (max-height: 600px) {
+  /* Sidebar: dar ama görünür */
+  #globalSidebar, .global-sidebar {
+    width: 180px !important;
+    min-width: 180px !important;
+    height: 100% !important;
+    flex-direction: column !important;
+    position: static !important;
+    border-right: 1px solid rgba(255,255,255,0.08) !important;
+    border-bottom: none !important;
+  }
+  #mainAppShell, .app-shell {
+    flex-direction: row !important;
+  }
+  .btn-mobile-nav-toggle { display: none !important; }
+  .landing-mobile-menu-btn { display: none !important; }
+}

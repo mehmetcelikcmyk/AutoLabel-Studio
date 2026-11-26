@@ -30,12 +30,17 @@ COPY . .
 # Ensure storage directories exist
 RUN mkdir -p exports static
 
-# Expose port
+# Never run the web process as root.  User uploads are stored in private R2,
+# therefore the runtime filesystem can remain read-only.
+RUN useradd --system --uid 10001 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Expose port (Railway injects PORT dynamically; default 8000)
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:8000/api/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:${PORT:-8000}/api/health || exit 1
 
 # Start FastAPI application
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]

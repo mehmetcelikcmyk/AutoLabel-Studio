@@ -8,16 +8,17 @@ services:
     container_name: yolo_editor_app
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      # The application must only be reachable through the TLS reverse proxy.
+      - "127.0.0.1:8000:8000"
     env_file:
       - .env
     environment:
       - PYTHONUNBUFFERED=1
       - HOST=0.0.0.0
       - PORT=8000
-    volumes:
-      # Verilerin sunucuda kalici olmasi icin baglanti
-      - .:/app
+    read_only: true
+    tmpfs:
+      - /tmp
     # GPU bulunan sunucularda aktif edebilirsiniz:
     # deploy:
     #   resources:

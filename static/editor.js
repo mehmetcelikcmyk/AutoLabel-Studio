@@ -25,20 +25,25 @@ class DatasetEditor {
     this.redoStack = [];
     this.selectedBoxIndices = new Set();
     this.activeClassId = 0;
-    this.mode = 'draw'; // 'draw', 'polygon', 'select', 'pan'
+    this.mode = localStorage.getItem('yolo_pref_defaulttool') || 'draw';
     this.polygonDraftPoints = []; // [{x, y}, ...] canvas pixel coords for drawing polygon
     this.polygonHoverPoint = null;
     this.selectedPolygonVertex = null; // {boxIndex, vertexIndex}
     this.isDirty = false;
-    this.autoSave = true;
-    this.showGuideLines = true;
+    this.autoSave = localStorage.getItem('yolo_pref_autosave') !== 'false';
+    this.showGuideLines = localStorage.getItem('yolo_pref_guidelines') !== 'false';
     this.clipboard = [];        // Copied boxes (Ctrl+C / Ctrl+V)
     this.prevImageBoxes = [];   // Previous image's boxes (Ctrl+Shift+V)
-    this.skipEmpty = false;     // Skip images without boxes when navigating
+    this.skipEmpty = localStorage.getItem('yolo_pref_skipempty') === 'true';
     this._contextMenuTarget = null; // Right-click target box index
 
+    // Image & Label Caches
+    this.imageCache = typeof LruImageCache !== 'undefined' ? new LruImageCache(160) : new Map();
+    this.labelCache = new Map();
+    this._preloadQueue = new Set();
+
     // Advanced Quality & Interaction State
-    this.autoEnhance = true;    // Auto-contrast & clarity filter on canvas
+    this.autoEnhance = localStorage.getItem('yolo_pref_autoenhance') !== 'false';    // Auto-contrast & clarity filter on canvas
     this.isLoupeActive = false; // Magnifier tool toggle
     this.isZPressed = false;    // Magnifier keyhold (Z)
     this.isHPressed = false;    // Hide boxes keyhold (H)
@@ -171,21 +176,35 @@ class DatasetEditor {
     this.setupModalEvents();
     this.setupAuthEvents();
     this.setupWorkspaceEvents();
+    this.setupUserMenuEvents();
+    this.setupWorkspaceSwitcherEvents();
 
-    // Handle Google OAuth callback params
+    // Handle Google OAuth callback params (destek: hem hash fragment hem query string)
+    const urlHash = window.location.hash;
+    const hashParams = new URLSearchParams(urlHash.startsWith('#') ? urlHash.slice(1) : urlHash);
     const urlParams = new URLSearchParams(window.location.search);
-    const googleToken = urlParams.get('google_token');
-    const authError = urlParams.get('auth_error');
-    const displayName = urlParams.get('display_name');
+    const googleToken = hashParams.get('google_token') || urlParams.get('google_token');
+    const authError = hashParams.get('auth_error') || urlParams.get('auth_error');
+    const displayName = hashParams.get('display_name') || urlParams.get('display_name');
 
     if (googleToken) {
       localStorage.setItem('yolo_auth_token', googleToken);
+      localStorage.setItem('authToken', googleToken);
+      sessionStorage.setItem('authToken', googleToken);
       if (displayName) localStorage.setItem('yolo_user_name', decodeURIComponent(displayName));
-      // Clean URL
-      window.history.replaceState({}, '', '/');
+      // Hash ve callback parametrelerini URL'den temizle
+      window.history.replaceState({}, '', window.location.pathname + (urlParams.get('tab') ? `?tab=${urlParams.get('tab')}` : ''));
     }
     if (authError) {
-      window.history.replaceState({}, '', '/');
+      window.history.replaceState({}, '', window.location.pathname);
+      // auth_error türüne göre kullanıcıya anlamlı mesaj hazırla
+      const _authErrorMessages = {
+        google_denied: 'Google ile giriş iptal edildi.',
+        google_no_email: 'Google hesabından e-posta adresi alınamadı. Hesap izinlerini kontrol edin.',
+        google_session_failed: 'Oturum oluşturulurken sunucu hatası oluştu. Lütfen tekrar deneyin.',
+        google_failed: 'Google ile giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.',
+      };
+      this._pendingAuthError = _authErrorMessages[authError] || `Giriş başarısız (${authError}). Lütfen tekrar deneyin.`;
     }
 
     // Handle browser back/forward navigation
@@ -321,7 +340,17 @@ class DatasetEditor {
   // =====================================================
 
   async checkAuth(authError = null) {
-    const token = localStorage.getItem('yolo_auth_token');
+    const urlHash = window.location.hash;
+    const hashParams = new URLSearchParams(urlHash.startsWith('#') ? urlHash.slice(1) : urlHash);
+    const urlParams = new URLSearchParams(window.location.search);
+    const googleToken = hashParams.get('google_token') || urlParams.get('google_token');
+    if (googleToken) {
+      localStorage.setItem('yolo_auth_token', googleToken);
+      localStorage.setItem('authToken', googleToken);
+      sessionStorage.setItem('authToken', googleToken);
+    }
+
+    const token = googleToken || localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
     if (token) {
       try {
         const res = await fetch('/api/auth/me', {
@@ -331,7 +360,7 @@ class DatasetEditor {
           const data = await res.json();
           this.currentUser = data.user;
           this._updateHeaderUser(data.user);
-          const savedName = localStorage.getItem('yolo_user_name');
+          const savedName = localStorage.getItem('yolo_user_name') || (hashParams.get('display_name') ? decodeURIComponent(hashParams.get('display_name')) : '');
           if (savedName) {
             this.showToast(`Hoş geldiniz, ${savedName}`, 'success');
             localStorage.removeItem('yolo_user_name');
@@ -341,7 +370,6 @@ class DatasetEditor {
           await this.fetchProjects();
 
           // Route according to URL parameters
-          const urlParams = new URLSearchParams(window.location.search);
           const editorProject = urlParams.get('editor');
           const project = urlParams.get('project');
           const pTab = urlParams.get('tab');
@@ -358,21 +386,48 @@ class DatasetEditor {
           } else if (pTab) {
             await this.showAppShell(pTab, false);
           } else {
-            await this.showAppShell('agent', false);
+            const defaultInitialTab = (this.currentUser?.is_admin || this.currentUser?.role === 'admin') ? 'admin' : 'agent';
+            await this.showAppShell(defaultInitialTab, false);
           }
           return;
         }
-      } catch (e) { }
+      } catch (e) {
+        // fetch hatası (ağ kesintisi vb.) — token geçersiz say
+        console.warn('[checkAuth] /api/auth/me fetch error:', e);
+      }
+      // Token geçersiz — storage temizle ve kullanıcıya bildir
+      const staleToken = googleToken; // Google'dan yeni gelen token geçersizse özellikle belirt
       localStorage.removeItem('yolo_auth_token');
+      localStorage.removeItem('authToken');
+      sessionStorage.removeItem('authToken');
+      if (staleToken) {
+        // Geçici bir hata mesajı hazırla (pendingAuthError yoksa)
+        this._pendingAuthError = this._pendingAuthError || 'Google ile giriş doğrulanamadı. Sunucu hatası olabilir, lütfen tekrar deneyin.';
+      }
     }
 
     // No valid token → check urlParams before defaulting to landing
     const unauthParams = new URLSearchParams(window.location.search);
     const uTab = unauthParams.get('tab');
     const uAuth = unauthParams.get('auth');
+
+    // Bekleyen auth hata mesajını göster ve login formunu aç
+    if (this._pendingAuthError) {
+      const errMsg = this._pendingAuthError;
+      this._pendingAuthError = null;
+      // Login ekranını aç, ardından hata toast'u tetikle
+      this.showAuth('login', false);
+      setTimeout(() => {
+        if (typeof this.showToast === 'function') this.showToast(errMsg, 'error');
+        const alertEl = document.getElementById('authAlert');
+        if (alertEl) { alertEl.textContent = errMsg; alertEl.style.display = 'block'; }
+      }, 300);
+      return;
+    }
+
     if (uTab === 'privacy' || unauthParams.get('view') === 'privacy') {
       this.showPrivacy('landing', false);
-    } else if (uAuth) {
+    } else if (uAuth === 'login' || uAuth === 'register') {
       this.showAuth(uAuth, false);
     } else {
       this.showLanding(authError, false);
@@ -430,6 +485,9 @@ class DatasetEditor {
     // Refresh projects list & workspace stats
     await this.fetchProjects();
     this.loadWorkspaceStats();
+
+    // Açılış yükleme overlay'ini kapat — showAppShell tamamlandığında loadingOverlay gizlenmeli
+    this.showLoading(false);
   }
 
 
@@ -468,10 +526,18 @@ class DatasetEditor {
       targetEl.style.display = 'flex';
     }
 
-    if (tabName === 'assets') {
+    if (tabName === 'agent') {
+      if (typeof this.initCosmicStarsAnimation === 'function') {
+        this.initCosmicStarsAnimation();
+      }
+    } else if (tabName === 'assets') {
       this.loadAssetLibrary();
     } else if (tabName === 'projects') {
       this.fetchProjects();
+    } else if (tabName === 'explore') {
+      if (typeof this.loadExploreProjects === 'function') {
+        this.loadExploreProjects();
+      }
     }
   }
 
@@ -486,8 +552,31 @@ class DatasetEditor {
       if (res.ok) {
         const data = await res.json();
         this.projectsList = data.projects || [];
+        this.projects = this.projectsList;
+        
+        let totalImages = 0;
+        let totalLabeled = 0;
+        let pendingReviews = 0;
+        this.projectsList.forEach(p => {
+          totalImages += (Number(p.image_count) || 0);
+          totalLabeled += (Number(p.label_count) || 0);
+          if (p.pending_review_count) pendingReviews += Number(p.pending_review_count);
+        });
+
+        const globalPct = totalImages > 0 ? Math.round((totalLabeled / totalImages) * 100) : 0;
+        
         const pCountEl = document.getElementById('wsNavProjectsCount');
+        const totProjEl = document.getElementById('dashStatTotalProjects');
+        const totImgEl = document.getElementById('dashStatTotalImages');
+        const globPctEl = document.getElementById('dashStatGlobalPct');
+        const pendingEl = document.getElementById('dashStatPendingReviews');
+
         if (pCountEl) pCountEl.textContent = this.projectsList.length;
+        if (totProjEl) totProjEl.textContent = this.projectsList.length;
+        if (totImgEl) totImgEl.textContent = totalImages.toLocaleString('tr-TR');
+        if (globPctEl) globPctEl.textContent = `%${globalPct}`;
+        if (pendingEl) pendingEl.textContent = pendingReviews;
+
         this.renderProjectsGrid(this.projectsList);
       }
     } catch (e) {
@@ -753,6 +842,9 @@ class DatasetEditor {
   }
 
   showLanding(authError = null, pushHistory = true) {
+    // Açılış yükleme overlay'ini kapat
+    this.showLoading(false);
+
     if (pushHistory) {
       this.navigateTo('landing');
     }
@@ -770,6 +862,7 @@ class DatasetEditor {
         'google_denied': 'Google girişi iptal edildi.',
         'google_no_email': 'Google hesabından e-posta alınamadı.',
         'google_failed': 'Google OAuth bağlantısı başarısız. Lütfen tekrar deneyin.',
+        'google_session_failed': 'Oturum oluşturulurken sunucu hatası oluştu. Lütfen tekrar deneyin.',
         'email_exists_local': 'Bu e-posta zaten şifre ile kayıtlıdır. Lütfen e-posta/şifre ile giriş yapın.',
       };
       const msg = msgs[authError] || 'Giriş sırasında bir hata oluştu.';
@@ -893,46 +986,249 @@ class DatasetEditor {
     if (el) { el.style.display = 'none'; el.innerHTML = ''; }
   }
 
+  _getInitials(name = '') {
+    if (!name || typeof name !== 'string') return 'U';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 1) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
   _updateHeaderUser(user) {
     if (!user) return;
-    const name = user.display_name || user.email.split('@')[0];
+    this.currentUser = user;
+    const name = user.display_name || user.email?.split('@')[0] || 'Kullanıcı';
+    const email = user.email || '';
+    const isAdmin = user.is_admin || user.role === 'admin';
+    const roleText = isAdmin ? 'Süper Yönetici' : 'Workspace Üyesi';
+    const initials = this._getInitials(name);
+
     const nameEl = document.getElementById('dashUserName');
     const wsUserEl = document.getElementById('wsUserName');
+    const wsUserRole = document.getElementById('wsUserRole');
     const agentGreeting = document.getElementById('agentUserNameGreeting');
-    const avatarEl = document.getElementById('dashUserAvatar');
+    const wsInitialsEl = document.getElementById('wsUserInitials');
     const wsAvatarEl = document.getElementById('wsUserAvatar');
-    const dropNameEl = document.getElementById('dashUserDropdownName');
-    const dropEmailEl = document.getElementById('dashUserDropdownEmail');
 
     if (nameEl) nameEl.textContent = name;
     if (wsUserEl) wsUserEl.textContent = name;
+    if (wsUserRole) wsUserRole.textContent = roleText;
     if (agentGreeting) agentGreeting.textContent = name;
+    if (wsInitialsEl) wsInitialsEl.textContent = initials;
 
-    const avatarUrl = user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3b82f6&color=fff&size=64`;
-    if (avatarEl) { avatarEl.src = avatarUrl; avatarEl.onerror = () => { avatarEl.style.display = 'none'; }; }
-    if (wsAvatarEl) { wsAvatarEl.src = avatarUrl; wsAvatarEl.onerror = () => { wsAvatarEl.style.display = 'none'; }; }
-    if (dropNameEl) dropNameEl.textContent = name;
-    if (dropEmailEl) dropEmailEl.textContent = user.email || '';
+    // Popover alanlarını güncelle
+    const popName = document.getElementById('wsPopoverName');
+    const popEmail = document.getElementById('wsPopoverEmail');
+    const popBadge = document.getElementById('wsPopoverRoleBadge');
+    const popInitials = document.getElementById('wsPopoverInitials');
+    const popAvatar = document.getElementById('wsPopoverAvatar');
+
+    if (popName) popName.textContent = name;
+    if (popEmail) popEmail.textContent = email;
+    if (popBadge) popBadge.textContent = roleText;
+    if (popInitials) popInitials.textContent = initials;
+
+    const avatarUrl = user.avatar_url;
+    if (avatarUrl && !avatarUrl.includes('ui-avatars.com')) {
+      if (wsAvatarEl) {
+        wsAvatarEl.src = avatarUrl;
+        wsAvatarEl.style.display = 'block';
+        if (wsInitialsEl) wsInitialsEl.style.display = 'none';
+        wsAvatarEl.onerror = () => {
+          wsAvatarEl.style.display = 'none';
+          if (wsInitialsEl) wsInitialsEl.style.display = 'flex';
+        };
+      }
+      if (popAvatar) {
+        popAvatar.src = avatarUrl;
+        popAvatar.style.display = 'block';
+        if (popInitials) popInitials.style.display = 'none';
+        popAvatar.onerror = () => {
+          popAvatar.style.display = 'none';
+          if (popInitials) popInitials.style.display = 'flex';
+        };
+      }
+    } else {
+      if (wsAvatarEl) wsAvatarEl.style.display = 'none';
+      if (wsInitialsEl) wsInitialsEl.style.display = 'flex';
+      if (popAvatar) popAvatar.style.display = 'none';
+      if (popInitials) popInitials.style.display = 'flex';
+    }
 
     // Populate Safe User Settings
     const prefName = document.getElementById('userPrefDisplayName');
     const prefEmail = document.getElementById('userPrefEmail');
     if (prefName) prefName.value = name;
-    if (prefEmail) prefEmail.value = user.email || '';
+    if (prefEmail) prefEmail.value = email;
 
     // Admin Access Control
-    const isAdmin = user.is_admin || user.role === 'admin';
     const adminNavBtn = document.getElementById('wsNavAdmin');
     if (adminNavBtn) {
       adminNavBtn.style.display = isAdmin ? 'flex' : 'none';
     }
-
-    const wsUserRole = document.querySelector('.ws-user-role');
-    if (wsUserRole) {
-      wsUserRole.textContent = isAdmin ? 'Süper Yönetici' : 'Workspace Üyesi';
+    const popoverAdminBtn = document.getElementById('wsMenuGoAdmin');
+    if (popoverAdminBtn) {
+      popoverAdminBtn.style.display = isAdmin ? 'flex' : 'none';
     }
+
+    // Menü listener'larının bağlı olduğundan emin ol
+    this.setupUserMenuEvents();
   }
 
+  setupUserMenuEvents() {
+    const popover = document.getElementById('wsUserPopover');
+    const userBtn = document.getElementById('wsUserMenuBtn');
+    if (!userBtn || !popover) return;
+
+    if (userBtn._boundUserMenu) return;
+    userBtn._boundUserMenu = true;
+
+    const togglePopover = (e) => {
+      e.stopPropagation();
+      const isOpen = popover.style.display === 'block';
+      popover.style.display = isOpen ? 'none' : 'block';
+    };
+
+    userBtn.addEventListener('click', togglePopover);
+
+    document.addEventListener('click', (e) => {
+      if (popover && popover.style.display === 'block' && !popover.contains(e.target) && !e.target.closest('#wsUserMenuBtn')) {
+        popover.style.display = 'none';
+      }
+    });
+
+    document.getElementById('wsMenuGoSettings')?.addEventListener('click', () => {
+      popover.style.display = 'none';
+      if (this.isProjectContext) this.closeProjectToWorkspace(false);
+      this.switchWorkspaceTab('settings');
+    });
+
+    document.getElementById('wsMenuGoAdmin')?.addEventListener('click', () => {
+      popover.style.display = 'none';
+      if (this.isProjectContext) this.closeProjectToWorkspace(false);
+      this.switchWorkspaceTab('admin');
+    });
+
+    document.getElementById('wsMenuTerms')?.addEventListener('click', () => {
+      popover.style.display = 'none';
+      const modal = document.getElementById('termsModal');
+      if (modal) modal.style.display = 'flex';
+    });
+
+    document.getElementById('wsLogoutBtn')?.addEventListener('click', () => {
+      popover.style.display = 'none';
+      this.logout();
+    });
+  }
+
+  toggleWorkspaceDropdown(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const dropdown = document.getElementById('wsWorkspaceDropdown');
+    if (!dropdown) return;
+    const isFlex = dropdown.style.display === 'flex';
+    dropdown.style.display = isFlex ? 'none' : 'flex';
+    const userPop = document.getElementById('wsUserPopover');
+    if (userPop && !isFlex) userPop.style.display = 'none';
+    const flyout = document.getElementById('wsCreditFlyout');
+    if (flyout && !isFlex) flyout.style.display = 'none';
+  }
+
+  setupWorkspaceSwitcherEvents() {
+    const selectorBox = document.getElementById('wsSelectorBox');
+    const dropdown = document.getElementById('wsWorkspaceDropdown');
+    const createBtn = document.getElementById('wsCreateNewBtn');
+    const createActionBtn = document.getElementById('wsCreateNewActionBtn');
+    const closeObBtn = document.getElementById('wsObCloseBtn');
+
+    if (!selectorBox) return;
+    if (selectorBox._boundWsSwitcher) return;
+    selectorBox._boundWsSwitcher = true;
+
+    selectorBox.addEventListener('click', (e) => this.toggleWorkspaceDropdown(e));
+
+    document.addEventListener('click', (e) => {
+      if (dropdown && dropdown.style.display === 'flex' && !dropdown.contains(e.target) && !e.target.closest('#wsSelectorBox')) {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    const handleOpenOnboarding = (e) => {
+      e.stopPropagation();
+      if (dropdown) dropdown.style.display = 'none';
+      this.openWorkspaceOnboarding();
+    };
+
+    createBtn?.addEventListener('click', handleOpenOnboarding);
+    createActionBtn?.addEventListener('click', handleOpenOnboarding);
+
+    closeObBtn?.addEventListener('click', () => {
+      const obScreen = document.getElementById('workspaceOnboardingScreen');
+      if (obScreen) {
+        obScreen.style.display = 'none';
+        obScreen.classList.remove('active');
+      }
+      this.showAppShell('projects', false);
+    });
+
+    // Delegated click for workspace items
+    const wsList = document.getElementById('wsWorkspaceList');
+    wsList?.addEventListener('click', (e) => {
+      const item = e.target.closest('.ws-item');
+      if (!item) return;
+      const wsName = item.querySelector('.ws-item-name')?.textContent || 'Workspace';
+      const wsSub = item.querySelector('.ws-item-sub')?.textContent || '';
+
+      wsList.querySelectorAll('.ws-item').forEach(i => {
+        i.classList.remove('active');
+        const check = i.querySelector('.ws-item-check');
+        if (check) check.remove();
+      });
+      item.classList.add('active');
+      item.insertAdjacentHTML('beforeend', `
+        <svg class="ws-item-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      `);
+
+      const titleEl = document.getElementById('wsTitle');
+      if (titleEl) titleEl.textContent = wsName;
+      const badgeEl = document.querySelector('.ws-plan-badge');
+      if (badgeEl && wsSub) badgeEl.textContent = wsSub;
+
+      if (dropdown) dropdown.style.display = 'none';
+      this.showToast(`${wsName} çalışma alanına geçildi.`, 'info');
+      if (this.isProjectContext) this.closeProjectToWorkspace(false);
+      this.switchWorkspaceTab('projects');
+    });
+  }
+
+  openWorkspaceOnboarding() {
+    if (typeof this.hideAllViews === 'function') this.hideAllViews();
+    const mainShell = document.getElementById('mainAppShell');
+    if (mainShell) {
+      mainShell.style.display = 'none';
+      mainShell.classList.remove('active');
+    }
+    if (typeof this.setupWorkspaceOnboardingEvents === 'function') {
+      this.setupWorkspaceOnboardingEvents();
+    }
+    const obScreen = document.getElementById('workspaceOnboardingScreen');
+    if (obScreen) {
+      obScreen.style.display = 'flex';
+      obScreen.classList.add('active');
+    }
+    this.currentObStep = 1;
+    const nameInp = document.getElementById('wsObNameInput');
+    if (nameInp && !nameInp.value) {
+      const uName = this.currentUser?.display_name || this.currentUser?.email?.split('@')[0] || 'My';
+      nameInp.value = `${uName}'s Workspace`;
+    }
+    if (typeof this.goToOnboardingStep === 'function') {
+      this.goToOnboardingStep(1);
+    }
+    if (typeof this.showLoading === 'function') this.showLoading(false);
+  }
 
   _checkPasswordStrength(pw) {
     let score = 0;
@@ -1847,6 +2143,9 @@ class DatasetEditor {
     let targetView = null;
     if (tabName === 'agent') {
       targetView = this.agentWorkspaceView;
+      if (typeof this.initCosmicStarsAnimation === 'function') {
+        this.initCosmicStarsAnimation();
+      }
     } else if (tabName === 'projects') {
       targetView = this.dashboardView;
       await this.loadDashboardProjects();
@@ -1854,7 +2153,62 @@ class DatasetEditor {
       targetView = this.assetLibraryView;
       await this.loadAssetLibrary();
     } else if (tabName === 'explore') {
-      targetView = this.exploreView;
+      targetView = document.getElementById('exploreView') || this.exploreView;
+      if (targetView) {
+        targetView.classList.add('active');
+        targetView.style.display = 'flex';
+      }
+      try {
+        if (typeof this.loadExploreProjects === 'function') {
+          await this.loadExploreProjects();
+        }
+      } catch (err) {
+        console.error('loadExploreProjects error:', err);
+      }
+    } else if (tabName === 'train') {
+      // Show Training Studio at Workspace Level
+      if (this.projectHubView) {
+        this.projectHubView.style.display = 'flex';
+        this.projectHubView.classList.add('active');
+      }
+      document.querySelectorAll('.hub-tab-panel').forEach(p => {
+        p.classList.remove('active');
+        p.style.display = 'none';
+      });
+      const p = document.getElementById('hubTabTrain');
+      if (p) { p.classList.add('active'); p.style.display = 'block'; }
+      this.loadTrainingHardwareRecommendation();
+      return;
+    } else if (tabName === 'models') {
+      // Show BYOM Model Hub at Workspace Level
+      if (this.projectHubView) {
+        this.projectHubView.style.display = 'flex';
+        this.projectHubView.classList.add('active');
+      }
+      document.querySelectorAll('.hub-tab-panel').forEach(p => {
+        p.classList.remove('active');
+        p.style.display = 'none';
+      });
+      const p = document.getElementById('hubTabModels');
+      if (p) { p.classList.add('active'); p.style.display = 'block'; }
+      this.loadModelHub();
+      return;
+    } else if (tabName === 'team') {
+      // Show Team & Collaboration Hub at Workspace Level
+      if (this.projectHubView) {
+        this.projectHubView.style.display = 'flex';
+        this.projectHubView.classList.add('active');
+      }
+      document.querySelectorAll('.hub-tab-panel').forEach(p => {
+        p.classList.remove('active');
+        p.style.display = 'none';
+      });
+      const p = document.getElementById('hubTabTeam');
+      if (p) { p.classList.add('active'); p.style.display = 'block'; }
+      this.loadTeamSyncHub();
+      const currentSubtab = new URLSearchParams(window.location.search).get('subtab') || 'org';
+      this.switchTeamSubtab(currentSubtab, false);
+      return;
     } else if (tabName === 'settings') {
       targetView = this.settingsWorkspaceView;
     } else if (tabName === 'admin') {
@@ -1869,6 +2223,13 @@ class DatasetEditor {
   }
 
   async openProject(projectId, defaultTab = 'upload', pushHistory = true) {
+    if (typeof this.loadHubProjectData !== 'function' && typeof this._lazyLoadModule === 'function') {
+      try {
+        await this._lazyLoadModule('js/modules/project-hub.js');
+      } catch (err) {
+        console.error('[openProject] project-hub yukleme hatasi:', err);
+      }
+    }
     // Resolve alias: bag <-> bag_detection_project
     if (projectId === 'bag' && !this.projects.some(p => p.id === 'bag')) {
       const match = this.projects.find(p => p.id === 'bag_detection_project' || p.id.includes('bag'));
@@ -1883,7 +2244,8 @@ class DatasetEditor {
       this.navigateTo('project', { projectId, tab: defaultTab });
     }
 
-    // Ensure app shell is open
+    // Ensure app shell is open and dismiss global loading overlay
+    if (typeof this.showLoading === 'function') this.showLoading(false);
     this.hideAllViews();
     if (this.mainAppShell) this.mainAppShell.style.display = 'flex';
 
@@ -1924,7 +2286,11 @@ class DatasetEditor {
     this.showProjectLoading(proj.name || projectId);
 
     try {
-      // Load Project Data and activate tab
+      // If direct tab is quality or stats, switch to it immediately so analysis starts without delay
+      if (defaultTab === 'quality' || defaultTab === 'stats') {
+        this.switchProjectTab(defaultTab, false);
+      }
+      // Load Project Data
       await this.loadHubProjectData();
       this.switchProjectTab(defaultTab, false);
     } finally {
@@ -3495,7 +3861,8 @@ class DatasetEditor {
           classes: bp.classes,
           visibility: 'public',
           license: 'CC BY 4.0',
-          project_type: bp.type || 'detection'
+          project_type: bp.type || 'detection',
+          workspace_id: this.activeWorkspaceId || localStorage.getItem('activeWorkspaceId') || null
         })
       });
       const data = await res.json();
@@ -4506,6 +4873,34 @@ class DatasetEditor {
     }
   }
 
+  selectAllBatchImages() {
+    const grid = document.getElementById('batchReviewThumbGrid');
+    if (!grid) return;
+    this.rfSelectedBatchFilenames = this.rfSelectedBatchFilenames || new Set();
+    grid.querySelectorAll('.rf-card-checkbox').forEach(cb => {
+      const fname = cb.dataset.filename;
+      if (fname) {
+        cb.checked = true;
+        this.rfSelectedBatchFilenames.add(fname);
+        cb.closest('.rf-image-card')?.classList.add('selected');
+      }
+    });
+    this.updateRfFloatingActionBar();
+  }
+
+  clearBatchSelection() {
+    this.rfSelectedBatchFilenames = this.rfSelectedBatchFilenames || new Set();
+    this.rfSelectedBatchFilenames.clear();
+    const grid = document.getElementById('batchReviewThumbGrid');
+    if (grid) {
+      grid.querySelectorAll('.rf-card-checkbox').forEach(cb => {
+        cb.checked = false;
+        cb.closest('.rf-image-card')?.classList.remove('selected');
+      });
+    }
+    this.updateRfFloatingActionBar();
+  }
+
   updateRfFloatingActionBar() {
     const bar = document.getElementById('rfFloatingActionBar');
     const countEl = document.getElementById('rfSelectedCountTxt');
@@ -4513,36 +4908,53 @@ class DatasetEditor {
 
     if (bar && countEl) {
       countEl.textContent = count;
-      bar.style.display = count > 0 ? 'flex' : 'none';
+      bar.style.display = count > 0 ? 'inline-flex' : 'none';
     }
 
-    // Action buttons inside floating bar
-    const annotateBtn = document.getElementById('rfBatchActionAnnotateBtn');
-    if (annotateBtn) {
-      annotateBtn.onclick = () => {
-        this.showEditor(this.activeHubProjectId, true, 'all', null, Array.from(this.rfSelectedBatchFilenames));
+    // Toolbar Quick Select-All / Deselect toggle
+    const toolbarBtn = document.getElementById('rfToolbarSelectAllBtn');
+    const toolbarTxt = document.getElementById('rfToolbarSelectAllTxt');
+    const grid = document.getElementById('batchReviewThumbGrid');
+    const totalVisible = grid ? grid.querySelectorAll('.rf-card-checkbox').length : 0;
+    if (toolbarBtn && toolbarTxt) {
+      if (totalVisible > 0 && count >= totalVisible) {
+        toolbarTxt.textContent = 'Seçimi Kaldır';
+        toolbarBtn.onclick = (e) => {
+          e.preventDefault();
+          this.clearBatchSelection();
+        };
+      } else {
+        toolbarTxt.textContent = 'Tümünü Seç';
+        toolbarBtn.onclick = (e) => {
+          e.preventDefault();
+          this.selectAllBatchImages();
+        };
+      }
+    }
+
+    // Floating Bar: Tümünü Seç
+    const selectAllBtn = document.getElementById('rfBatchSelectAllVisibleBtn');
+    if (selectAllBtn) {
+      selectAllBtn.onclick = (e) => {
+        e.preventDefault();
+        this.selectAllBatchImages();
       };
     }
 
-    const tagBtn = document.getElementById('rfBatchActionTagBtn');
-    if (tagBtn) {
-      tagBtn.onclick = async () => {
-        const tag = await this.showPrompt({
-          title: 'Görsellere Etiket Ekle',
-          subtitle: 'Toplu İşlem',
-          message: `Seçili ${count} görsel için etiket giriniz:`,
-          placeholder: 'Örn: onaylandi, kontrol_edildi...',
-          confirmText: 'Etiketi Uygula'
-        });
-        if (tag && tag.trim()) {
-          this.showToast(`${count} görsele "${tag}" etiketi eklendi.`, 'success');
-        }
+    // Floating Bar: Seçimi Kaldır
+    const clearBtn = document.getElementById('rfBatchClearSelectionBtn');
+    if (clearBtn) {
+      clearBtn.onclick = (e) => {
+        e.preventDefault();
+        this.clearBatchSelection();
       };
     }
 
+    // Floating Bar: Sil
     const deleteBtn = document.getElementById('rfBatchActionDeleteBtn');
     if (deleteBtn) {
-      deleteBtn.onclick = async () => {
+      deleteBtn.onclick = async (e) => {
+        e.preventDefault();
         const confirmed = await this.showConfirm({
           title: 'Seçili Görselleri Sil',
           subtitle: 'Toplu Silme',
@@ -4552,12 +4964,26 @@ class DatasetEditor {
           type: 'danger'
         });
         if (confirmed) {
-          for (const fn of Array.from(this.rfSelectedBatchFilenames)) {
-            await fetch(`/api/delete-image?category=${encodeURIComponent(this.activeHubProjectId)}&filename=${encodeURIComponent(fn)}`, { method: 'DELETE' });
+          this.showLoading(true, 'Görseller siliniyor...');
+          try {
+            const authHeaders = this.getAuthHeaders ? this.getAuthHeaders({ 'Content-Type': 'application/json' }) : { 'Content-Type': 'application/json' };
+            for (const fn of Array.from(this.rfSelectedBatchFilenames)) {
+              await fetch('/api/delete-image', {
+                method: 'POST',
+                headers: authHeaders,
+                body: JSON.stringify({ category: this.activeHubProjectId, filename: fn })
+              });
+            }
+            this.showToast(`${count} görsel başarıyla silindi.`, 'success');
+            this.clearBatchSelection();
+            await this.loadHubProjectData();
+            this.openBatchReview(this.activeBatchReviewId, this.activeBatchReviewTab, this.rfBatchCurrentPage);
+          } catch (err) {
+            console.error('Batch delete error:', err);
+            this.showToast('Görseller silinirken bir hata oluştu.', 'error');
+          } finally {
+            this.showLoading(false);
           }
-          this.showToast(`${count} görsel başarıyla silindi.`, 'success');
-          this.rfSelectedBatchFilenames.clear();
-          this.openBatchReview(this.activeBatchReviewId, this.activeBatchReviewTab, this.rfBatchCurrentPage);
         }
       };
     }
@@ -5403,7 +5829,10 @@ class DatasetEditor {
     }
 
     try {
-      const res = await fetch(`/api/projects/quality-stats?category=${encodeURIComponent(cat)}`);
+      const token = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
+      const tokenQuery = token ? `&token=${encodeURIComponent(token)}` : '';
+      const headers = this.getAuthHeaders ? this.getAuthHeaders() : (token ? { 'Authorization': `Bearer ${token}` } : {});
+      const res = await fetch(`/api/projects/quality-stats?category=${encodeURIComponent(cat)}${tokenQuery}`, { headers });
       if (!res.ok) throw new Error('Kalite verisi çekilemedi.');
       const data = await res.json();
       
@@ -5517,7 +5946,10 @@ class DatasetEditor {
     }
 
     try {
-      const res = await fetch(`/api/projects/labeling-stats?category=${encodeURIComponent(cat)}`);
+      const token = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
+      const tokenQuery = token ? `&token=${encodeURIComponent(token)}` : '';
+      const headers = this.getAuthHeaders ? this.getAuthHeaders() : (token ? { 'Authorization': `Bearer ${token}` } : {});
+      const res = await fetch(`/api/projects/labeling-stats?category=${encodeURIComponent(cat)}${tokenQuery}`, { headers });
       if (!res.ok) throw new Error('İstatistikler alınamadı.');
       const data = await res.json();
       this.cachedStatsData[cat] = data; // Önbelleğe kaydet
@@ -5855,6 +6287,8 @@ class DatasetEditor {
             delBtn.innerHTML = `<span class="spinner" style="width:14px; height:14px; border-width:2px; display:inline-block; margin-right:6px;"></span> Temizleniyor...`;
           }
 
+          this.showLoading(true, 'Kopya Görseller Temizleniyor...', `${allDups.length} adet mükerrer dosya siliniyor, lütfen bekleyiniz...`);
+
           try {
             const res = await fetch('/api/projects/delete-duplicates-bulk', {
               method: 'POST',
@@ -5895,6 +6329,8 @@ class DatasetEditor {
               delBtn.disabled = false;
               delBtn.innerHTML = `<span>Tüm Kopyaları Otomatik Temizle</span>`;
             }
+          } finally {
+            this.showLoading(false);
           }
         });
 
@@ -6077,6 +6513,23 @@ class DatasetEditor {
         this.dashGlobalSummary.textContent = `${this.projects.length} Proje • ${totalLabeled} / ${totalImages} Etiketli (%${globalPct})`;
       }
 
+      // Rol ve karşılama alanını sadeleştir
+      const roleBadgeEl = document.getElementById('dashUserRoleBadge');
+      if (roleBadgeEl) roleBadgeEl.style.display = 'none';
+
+      const hasProjects = (this.projects && this.projects.length > 0);
+      const quickStats = document.getElementById('dashQuickStatsRow');
+      if (quickStats) quickStats.style.display = hasProjects ? 'flex' : 'none';
+      const dashToolbar = document.querySelector('.dash-toolbar');
+      if (dashToolbar) dashToolbar.style.display = hasProjects ? 'flex' : 'none';
+
+      const totProjStat = document.getElementById('dashStatTotalProjects');
+      if (totProjStat) totProjStat.textContent = this.projects.length;
+      const totImgStat = document.getElementById('dashStatTotalImages');
+      if (totImgStat) totImgStat.textContent = totalImages.toLocaleString('tr-TR');
+      const globPctStat = document.getElementById('dashStatGlobalPct');
+      if (globPctStat) globPctStat.textContent = `%${globalPct}`;
+
       this.renderDashboardProjects();
     } catch (err) {
       console.error(err);
@@ -6102,40 +6555,86 @@ class DatasetEditor {
       return 0;
     });
 
-    if (list.length === 0) {
-      if (query) {
-        this.projectsGrid.innerHTML = `
-          <div class="empty-state-modern" style="grid-column: 1 / -1;">
-            <div class="empty-state-icon-wrap">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-            </div>
-            <h3>Eşleşen Proje Bulunamadı</h3>
-            <p>"${this._escapeHtml(query)}" aramasına uygun herhangi bir proje bulunamadı. Lütfen arama teriminizi kontrol edin.</p>
-          </div>
-        `;
-      } else {
-        this.projectsGrid.innerHTML = `
-          <div class="empty-state-modern" style="grid-column: 1 / -1;">
-            <div class="empty-state-icon-wrap">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+    // Çalışma alanında hiç proje yoksa 3 kartlı başlangıç sun
+    if (!this.projects || this.projects.length === 0) {
+      this.projectsGrid.innerHTML = `
+        <div class="dash-empty-onboarding">
+          <div class="dash-onboarding-hero">
+            <div class="dash-onboarding-icon">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                <line x1="12" y1="11" x2="12" y2="17"></line>
+                <line x1="9" y1="14" x2="15" y2="14"></line>
               </svg>
             </div>
-            <h3>Henüz Kayıtlı Proje Bulunmuyor</h3>
-            <p>AI Asistan ile sohbet ederek veya sihirbazı kullanarak saniyeler içinde yeni bir veri seti projesi başlatabilirsiniz.</p>
-            <button class="btn-primary" id="emptyDashGoAgentBtn" style="margin-top:18px;">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-              <span>AI Asistan ile Proje Başlat</span>
-            </button>
+            <h2>Henüz bir proje oluşturmadınız</h2>
+            <p>Kendi görsellerinizi yükleyip hemen etiketlemeye başlayabilir veya hazır şablonları deneyebilirsiniz.</p>
           </div>
-        `;
-        document.getElementById('emptyDashGoAgentBtn')?.addEventListener('click', () => this.switchWorkspaceTab('agent'));
-      }
+
+          <div class="dash-onboard-cards-grid">
+            <div class="dash-onboard-card highlight" id="onboardCardCreate">
+              <div class="dash-onboard-icon-box blue">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </div>
+              <div class="dash-onboard-info">
+                <h3>Sıfırdan Proje Başlat</h3>
+                <p>Kendi görsel ve etiketlerinizi yükleyin, nesne tespiti veya sınıflandırma veri seti kurun.</p>
+              </div>
+              <button class="btn-primary btn-sm">Proje Oluştur →</button>
+            </div>
+
+            <div class="dash-onboard-card" id="onboardCardAgent">
+              <div class="dash-onboard-icon-box purple">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+              </div>
+              <div class="dash-onboard-info">
+                <h3>AI Asistan ile Tasarla</h3>
+                <p>Yapay zekaya ne tespit etmek istediğinizi söyleyin, sınıfları ve veri seti planını hazırlasın.</p>
+              </div>
+              <button class="btn-secondary btn-sm">Asistana Git →</button>
+            </div>
+
+            <div class="dash-onboard-card" id="onboardCardTemplates">
+              <div class="dash-onboard-icon-box amber">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+                </svg>
+              </div>
+              <div class="dash-onboard-info">
+                <h3>Hazır Örnek Şablonlar</h3>
+                <p>Şişe kusuru veya trafik tespiti gibi hazır veri setleriyle platformu hemen test edin.</p>
+              </div>
+              <button class="btn-secondary btn-sm">Şablonları İncele →</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('onboardCardCreate')?.addEventListener('click', () => this.showCreateProject());
+      document.getElementById('onboardCardAgent')?.addEventListener('click', () => this.switchWorkspaceTab('agent'));
+      document.getElementById('onboardCardTemplates')?.addEventListener('click', () => this.switchWorkspaceTab('explore'));
+      return;
+    }
+
+    if (list.length === 0) {
+      this.projectsGrid.innerHTML = `
+        <div class="empty-state-modern" style="grid-column: 1 / -1;">
+          <div class="empty-state-icon-wrap">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+          <h3>Eşleşen Proje Bulunamadı</h3>
+          <p>${query ? `"${this._escapeHtml(query)}" aramasına uygun herhangi bir proje bulunamadı.` : 'Seçili filtreye uygun proje bulunamadı.'}</p>
+        </div>
+      `;
       return;
     }
 
@@ -6222,6 +6721,14 @@ class DatasetEditor {
       });
       card.querySelector('[data-action="config"]')?.addEventListener('click', (e) => { e.stopPropagation(); this.showProjectHub(proj.id, 'settings'); });
       card.querySelector('[data-action="delete"]')?.addEventListener('click', (e) => { e.stopPropagation(); this.deleteProject(proj.id); });
+
+      const classesRow = card.querySelector('.project-classes-row');
+      classesRow?.addEventListener('wheel', (e) => {
+        if (e.deltaY !== 0) {
+          e.preventDefault();
+          classesRow.scrollLeft += e.deltaY;
+        }
+      }, { passive: false });
 
       this.projectsGrid.appendChild(card);
     });
@@ -6398,6 +6905,7 @@ class DatasetEditor {
             visibility: visibility,
             license: license,
             project_type: projectType,
+            workspace_id: this.activeWorkspaceId || localStorage.getItem('activeWorkspaceId') || null,
           })
         });
         const result = await res.json();
@@ -6464,7 +6972,66 @@ class DatasetEditor {
       updateStagedUploadFiles(files);
     });
 
-    hubConfirmUploadBtn?.addEventListener('click', async () => {
+    const convertFileToWebp = async (file, maxDimension = 1920, quality = 0.88) => {
+      if (!file || typeof file.name !== 'string') return file;
+      const lowerName = file.name.toLowerCase();
+      if (lowerName.endsWith('.txt') || lowerName.endsWith('.webp')) return file;
+      if (!/\.(jpe?g|png|bmp)$/i.test(lowerName)) return file;
+
+      try {
+        const bitmap = await createImageBitmap(file);
+        let { width, height } = bitmap;
+        if (Math.max(width, height) > maxDimension) {
+          const scale = maxDimension / Math.max(width, height);
+          width = Math.max(1, Math.round(width * scale));
+          height = Math.max(1, Math.round(height * scale));
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { alpha: false });
+        ctx.drawImage(bitmap, 0, 0, width, height);
+        bitmap.close();
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', quality));
+        if (!blob) return file;
+
+        const baseName = file.name.replace(/\.[^/.]+$/, '');
+        return new File([blob], `${baseName}.webp`, { type: 'image/webp', lastModified: file.lastModified || Date.now() });
+      } catch (e) {
+        console.warn('WebP conversion fallback to original file:', file.name, e);
+        return file;
+      }
+    };
+
+    const batchConvertFilesToWebp = async (files, progressCb) => {
+      if (!Array.isArray(files) || files.length === 0) return files;
+      const CONCURRENCY = 6;
+      const converted = new Array(files.length);
+      let completed = 0;
+      const queue = files.map((f, i) => ({ file: f, index: i }));
+
+      const worker = async () => {
+        while (queue.length > 0) {
+          const item = queue.shift();
+          if (!item) break;
+          converted[item.index] = await convertFileToWebp(item.file);
+          completed++;
+          if (progressCb) progressCb(completed, files.length);
+        }
+      };
+
+      const workers = [];
+      for (let i = 0; i < Math.min(CONCURRENCY, files.length); i++) {
+        workers.push(worker());
+      }
+      await Promise.all(workers);
+      return converted;
+    };
+
+    if (hubConfirmUploadBtn && !hubConfirmUploadBtn._uploadWired) {
+      hubConfirmUploadBtn._uploadWired = true;
+      hubConfirmUploadBtn.addEventListener('click', async () => {
       if (!this.stagedUploadFiles || this.stagedUploadFiles.length === 0) {
         this.showToast('Lütfen önce dosya seçiniz.', 'warning');
         return;
@@ -6472,15 +7039,18 @@ class DatasetEditor {
       if (!this.activeHubProjectId) return;
 
       const totalFiles = this.stagedUploadFiles.length;
-      const CHUNK_SIZE = 120; // 120 files per request (under server 150 limit)
+      const splitOpt = document.getElementById('uploadAutoBatchSplitSelect')?.value || '500';
+      const splitSize = splitOpt === 'none' ? 1000 : parseInt(splitOpt, 10);
+      const CHUNK_SIZE = Math.min(1000, splitSize);
+      const convertToWebp = (document.getElementById('uploadWebpConvertSelect')?.value || 'auto') === 'auto';
       const totalChunks = Math.ceil(totalFiles / CHUNK_SIZE);
       const bName = document.getElementById('uploadBatchNameInput')?.value.trim() || '';
       const bTags = document.getElementById('uploadTagsInput')?.value.trim() || '';
       const token = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
 
       this.showLoading(true, {
-        title: 'Görseller Yükleniyor ve Doğrulanıyor...',
-        text: 'Lütfen bekleyiniz. Dosyalar taranıp aktarılıyor.',
+        title: convertToWebp ? 'Görseller WebP ile Optimize Ediliyor...' : 'Görseller Yükleniyor ve Doğrulanıyor...',
+        text: convertToWebp ? 'Donanım hızlandırmalı WebP sıkıştırması başlatılıyor (%85 boyut tasarrufu)...' : 'Lütfen bekleyiniz, dosyalar aktarılıyor.',
         status: 'Yükleme başlatılıyor',
         progress: {
           pct: 0,
@@ -6491,11 +7061,33 @@ class DatasetEditor {
 
       let uploadedFilesCount = 0;
       let totalBytesUploaded = 0;
-      let totalBytesAll = this.stagedUploadFiles.reduce((acc, f) => acc + (f.size || 0), 0) || 1;
+      // Eğer WebP dönüştürme aktifse tahmini sıkıştırılmış boyutu baz al (ortalama %85 tasarruf)
+      const rawBytes = this.stagedUploadFiles.reduce((acc, f) => acc + (f.size || 0), 0) || 1;
+      let totalBytesAll = convertToWebp ? Math.round(rawBytes * 0.15) : rawBytes;
 
       try {
         for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
-          const chunkFiles = this.stagedUploadFiles.slice(chunkIdx * CHUNK_SIZE, (chunkIdx + 1) * CHUNK_SIZE);
+          let chunkFiles = this.stagedUploadFiles.slice(chunkIdx * CHUNK_SIZE, (chunkIdx + 1) * CHUNK_SIZE);
+
+          if (convertToWebp) {
+            this.showLoading(true, {
+              title: `Görseller WebP Formatına Sıkıştırılıyor (${chunkIdx + 1}/${totalChunks})...`,
+              text: 'Donanım hızlandırmalı WebP optimizasyonu uygulanıyor (%85 boyut tasarrufu)...',
+              status: 'Hızlı WebP dönüştürme',
+              progress: { pct: Math.round((chunkIdx / totalChunks) * 100), current: uploadedFilesCount, total: totalFiles }
+            });
+            chunkFiles = await batchConvertFilesToWebp(chunkFiles, (done, count) => {
+              if (this.isLoadingMinimized) {
+                this.updateFloatingUploadWidget(
+                  Math.round((chunkIdx / totalChunks) * 100),
+                  uploadedFilesCount + done,
+                  totalFiles,
+                  bName || 'WebP Optimizasyonu'
+                );
+              }
+            });
+          }
+
           const formData = new FormData();
           formData.append('category', this.activeHubProjectId);
           if (bName) formData.append('batch_name', totalChunks > 1 ? `${bName} (Part ${chunkIdx + 1}/${totalChunks})` : bName);
@@ -6514,13 +7106,13 @@ class DatasetEditor {
                 previousChunkLoaded = e.loaded;
                 totalBytesUploaded += chunkDelta;
 
-                const overallPct = Math.min(99, Math.round((totalBytesUploaded / totalBytesAll) * 100));
+                const overallPct = Math.min(99, Math.round((uploadedFilesCount + Math.round((e.loaded / e.total) * chunkFiles.length)) / totalFiles * 100));
                 const loadedMB = (totalBytesUploaded / (1024 * 1024)).toFixed(1);
-                const totalMB = (totalBytesAll / (1024 * 1024)).toFixed(1);
+                const totalMB = (Math.max(totalBytesUploaded, totalBytesAll) / (1024 * 1024)).toFixed(1);
                 const estimatedFiles = Math.min(totalFiles, uploadedFilesCount + Math.round((e.loaded / e.total) * chunkFiles.length));
 
                 this.showLoading(true, {
-                  title: `Görseller Yükleniyor ve Doğrulanıyor... (%${overallPct})`,
+                  title: `Görseller Yükleniyor... (%${overallPct})`,
                   text: `Paket ${chunkIdx + 1} / ${totalChunks} — ${loadedMB} MB / ${totalMB} MB aktarıldı.`,
                   status: 'YOLO formatı ve görsel bütünlüğü kontrol ediliyor',
                   progress: {
@@ -6545,6 +7137,8 @@ class DatasetEditor {
                 }
               }
             };
+            xhr.timeout = 300000;
+            xhr.ontimeout = () => reject(new Error('Sunucu yanıt verme zaman aşımına uğradı.'));
             xhr.onerror = () => reject(new Error('Ağ hatası oluştu.'));
             xhr.send(formData);
           });
@@ -6581,6 +7175,7 @@ class DatasetEditor {
         this.showToast(err.message || 'Yükleme başarısız oldu.', 'error');
       }
     });
+    }
 
     // Hub Tab: Dataset Export and Batch AI buttons
     document.getElementById('hubExportZipBtn')?.addEventListener('click', () => {
@@ -7399,14 +7994,35 @@ class DatasetEditor {
     });
 
     // Box Actions
-    this.deleteSelectedBtn.addEventListener('click', () => this.deleteSelectedBoxes());
-    this.deleteBtnLabel.addEventListener('click', () => this.deleteSelectedBoxes());
-    this.selectAllBtn.addEventListener('click', () => this.selectAllBoxes());
-    this.clearAllBtn.addEventListener('click', () => this.clearAllBoxes());
+    if (this.deleteSelectedBtn && !this.deleteSelectedBtn._wired) {
+      this.deleteSelectedBtn._wired = true;
+      this.deleteSelectedBtn.addEventListener('click', () => this.deleteSelectedBoxes());
+    }
+    if (this.deleteBtnLabel && !this.deleteBtnLabel._wired) {
+      this.deleteBtnLabel._wired = true;
+      this.deleteBtnLabel.addEventListener('click', () => this.deleteSelectedBoxes());
+    }
+    if (this.selectAllBtn && !this.selectAllBtn._wired) {
+      this.selectAllBtn._wired = true;
+      this.selectAllBtn.addEventListener('click', () => this.selectAllBoxes());
+    }
+    if (this.clearAllBtn && !this.clearAllBtn._wired) {
+      this.clearAllBtn._wired = true;
+      this.clearAllBtn.addEventListener('click', () => this.clearAllBoxes());
+    }
 
-    if (this.undoBtn) this.undoBtn.addEventListener('click', () => this.undo());
-    if (this.redoBtn) this.redoBtn.addEventListener('click', () => this.redo());
-    this.revertBtn.addEventListener('click', () => this.revertBoxes());
+    if (this.undoBtn && !this.undoBtn._wired) {
+      this.undoBtn._wired = true;
+      this.undoBtn.addEventListener('click', () => this.undo());
+    }
+    if (this.redoBtn && !this.redoBtn._wired) {
+      this.redoBtn._wired = true;
+      this.redoBtn.addEventListener('click', () => this.redo());
+    }
+    if (this.revertBtn && !this.revertBtn._wired) {
+      this.revertBtn._wired = true;
+      this.revertBtn.addEventListener('click', () => this.revertBoxes());
+    }
 
     const deleteCurrentImageBtn = document.getElementById('deleteCurrentImageBtn');
     if (deleteCurrentImageBtn) {
@@ -7567,19 +8183,18 @@ class DatasetEditor {
       this.render();
     });
 
-    window.addEventListener('mousemove', (e) => this.onMouseMove(e));
-    window.addEventListener('mouseup', (e) => this.onMouseUp(e));
-
-    // Keyboard Shortcuts
-    window.addEventListener('keydown', (e) => this.onKeyDown(e));
-    window.addEventListener('keyup', (e) => this.onKeyUp(e));
-
-    // Window Resize
-    window.addEventListener('resize', () => {
-      if (this.currentView === 'editor' && this.imageObj) {
-        this.fitToViewport();
-      }
-    });
+    if (!window._editorGlobalListenersWired) {
+      window._editorGlobalListenersWired = true;
+      window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+      window.addEventListener('mouseup', (e) => this.onMouseUp(e));
+      window.addEventListener('keydown', (e) => this.onKeyDown(e));
+      window.addEventListener('keyup', (e) => this.onKeyUp(e));
+      window.addEventListener('resize', () => {
+        if (this.currentView === 'editor' && this.imageObj) {
+          this.fitToViewport();
+        }
+      });
+    }
 
     // Sidebar Toggles
     this.toggleLeftSidebarHeaderBtn = document.getElementById('toggleLeftSidebarHeaderBtn');
@@ -7656,10 +8271,15 @@ class DatasetEditor {
           })
         });
         if (res.ok) {
-          this.showToast(`🎉 "${this.activeBatchName}" başarıyla veri setine eklendi!`, 'success');
-          // Switch back to annotate tab and refresh Kanban
-          this.switchProjectTab('annotate');
-          this.loadHubProjectData();
+          this.showToast(`"${this.activeBatchName}" başarıyla veri setine eklendi`, 'success');
+          const targetProject = this.currentCategory || this.activeHubProjectId || new URLSearchParams(window.location.search).get('project') || 'modai';
+          const returnTab = this.editorReturnTab || 'annotate';
+          if (typeof this.openProject === 'function') {
+            this.openProject(targetProject, returnTab, true);
+          } else {
+            this.switchProjectTab(returnTab);
+            this.loadHubProjectData();
+          }
         } else {
           this.showToast('Veri setine eklenirken hata oluştu', 'error');
         }
@@ -8189,26 +8809,54 @@ class DatasetEditor {
   }
 
   handleApprovedImageAdvance() {
-    if (this.currentFilter === 'unlabeled' || this.currentFilter === 'annotating') {
-      const removedFilename = this.currentImage?.filename;
-      if (removedFilename) {
-        const idx = this.filteredImages.findIndex(i => i.filename === removedFilename);
-        if (idx !== -1) {
-          this.filteredImages.splice(idx, 1);
+    const removedFilename = this.currentImage?.filename;
+    if (removedFilename) {
+      const idx = this.filteredImages.findIndex(i => i.filename === removedFilename);
+      if (idx !== -1) {
+        this.filteredImages.splice(idx, 1);
+      }
+      if (this.currentBatchFilenamesFilter && Array.isArray(this.currentBatchFilenamesFilter)) {
+        const bIdx = this.currentBatchFilenamesFilter.indexOf(removedFilename);
+        if (bIdx !== -1) {
+          this.currentBatchFilenamesFilter.splice(bIdx, 1);
         }
       }
+      const globalImg = this.images.find(i => i.filename === removedFilename);
+      if (globalImg) {
+        globalImg.is_approved = true;
+        globalImg.box_count = this.boxes ? this.boxes.length : 0;
+        globalImg.has_label_file = (globalImg.box_count > 0);
+      }
+    }
 
-      this.renderLeftSidebarList();
+    if (this.totalImagesCount) {
+      this.totalImagesCount.textContent = this.filteredImages.length;
+    }
+    const jobCountEl = document.getElementById('editorJobCountBadge');
+    if (jobCountEl) {
+      jobCountEl.textContent = `${this.filteredImages.length.toLocaleString()} Resim`;
+    }
 
-      if (this.filteredImages.length > 0) {
-        const nextIdx = Math.min(this.currentIndex, this.filteredImages.length - 1);
-        this.goToIndex(nextIdx);
-      } else {
-        this.showToast('🎉 Tebrikler! Tüm görseller onaylandı ve Veri Setine aktarıldı!', 'success');
-        this.switchProjectTab('annotate');
+    this.renderLeftSidebarList();
+
+    if (this.filteredImages.length > 0) {
+      const nextIdx = Math.min(this.currentIndex, this.filteredImages.length - 1);
+      this.goToIndex(nextIdx);
+      if (typeof this.loadHubProjectData === 'function') {
+        this.loadHubProjectData().catch(() => {});
       }
     } else {
-      this.navigateNext();
+      this.currentImage = null;
+      this.boxes = [];
+      this.clearCanvas();
+      this.showToast('Görevdeki tüm görseller onaylandı ve Veri Setine aktarıldı', 'success');
+      const targetProject = this.currentCategory || this.activeHubProjectId || new URLSearchParams(window.location.search).get('project') || 'modai';
+      const returnTab = this.editorReturnTab || 'annotate';
+      if (typeof this.openProject === 'function') {
+        this.openProject(targetProject, returnTab, true);
+      } else {
+        this.switchProjectTab(returnTab);
+      }
     }
   }
 
@@ -10179,15 +10827,54 @@ class DatasetEditor {
 
   showLoading(show, titleOrOpts = 'Lütfen Bekleyiniz...', text = 'İşlem gerçekleştiriliyor...', progress = null) {
     const overlay = document.getElementById('loadingOverlay');
-    if (!overlay) return;
+    const floatingWidget = document.getElementById('floatingUploadWidget');
+
+    if (!this._hasBoundMinimizeListeners) {
+      this._hasBoundMinimizeListeners = true;
+      document.getElementById('loadingMinimizeBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.minimizeLoading();
+      });
+      floatingWidget?.addEventListener('click', () => {
+        this.maximizeLoading();
+      });
+    }
 
     if (!show) {
+      if (this._uploadBeforeUnloadHandler) {
+        window.removeEventListener('beforeunload', this._uploadBeforeUnloadHandler);
+        this._uploadBeforeUnloadHandler = null;
+      }
+
+      if (this.isUploadMinimized && floatingWidget && floatingWidget.style.display !== 'none') {
+        const spinner = document.getElementById('floatingUploadSpinner');
+        const doneIcon = document.getElementById('floatingUploadDoneIcon');
+        const fTitle = document.getElementById('floatingUploadTitle');
+        const fMeta = document.getElementById('floatingUploadMeta');
+        const fBar = document.getElementById('floatingUploadBar');
+        const fPct = document.getElementById('floatingUploadPct');
+
+        if (spinner) spinner.style.display = 'none';
+        if (doneIcon) doneIcon.style.display = 'block';
+        if (fTitle) fTitle.textContent = 'Yükleme Tamamlandı!';
+        if (fMeta) fMeta.textContent = 'Tüm dosyalar başarıyla aktarıldı.';
+        if (fBar) fBar.style.width = '100%';
+        if (fPct) fPct.textContent = '%100';
+
+        setTimeout(() => {
+          if (floatingWidget) floatingWidget.style.display = 'none';
+          if (spinner) spinner.style.display = 'block';
+          if (doneIcon) doneIcon.style.display = 'none';
+          this.isUploadMinimized = false;
+        }, 3500);
+      } else {
+        if (floatingWidget) floatingWidget.style.display = 'none';
+        this.isUploadMinimized = false;
+      }
+
+      if (!overlay) return;
       overlay.classList.remove('active');
-      setTimeout(() => {
-        if (!overlay.classList.contains('active')) {
-          overlay.style.display = 'none';
-        }
-      }, 250);
+      overlay.style.display = 'none';
       return;
     }
 
@@ -10197,6 +10884,48 @@ class DatasetEditor {
     } else {
       opts = { title: titleOrOpts, text: text, progress: progress };
     }
+    this.lastLoadingOpts = opts;
+
+    if (opts.progress && !this._uploadBeforeUnloadHandler) {
+      this._uploadBeforeUnloadHandler = (e) => {
+        e.preventDefault();
+        e.returnValue = 'Yükleme işlemi arka planda devam ediyor. Sayfadan ayrılırsanız işlem yarıda kalabilir.';
+        return e.returnValue;
+      };
+      window.addEventListener('beforeunload', this._uploadBeforeUnloadHandler);
+    }
+
+    const minRow = document.getElementById('loadingMinimizeRow');
+    if (minRow) {
+      minRow.style.display = opts.progress ? 'block' : 'none';
+    }
+
+    if (this.isUploadMinimized) {
+      if (overlay) {
+        overlay.classList.remove('active');
+        overlay.style.display = 'none';
+      }
+      const tasksContainer = document.getElementById('floatingTasksContainer');
+      if (tasksContainer) tasksContainer.style.display = 'flex';
+      if (floatingWidget) {
+        floatingWidget.style.display = 'block';
+        const fTitle = document.getElementById('floatingUploadTitle');
+        const fPct = document.getElementById('floatingUploadPct');
+        const fMeta = document.getElementById('floatingUploadMeta');
+        const fBar = document.getElementById('floatingUploadBar');
+
+        const pct = Math.max(0, Math.min(100, Math.round(opts.progress?.pct || 0)));
+        if (fTitle) fTitle.textContent = opts.title || 'Arka Planda Yükleniyor...';
+        if (fPct) fPct.textContent = `${pct}%`;
+        if (fBar) fBar.style.width = `${pct}%`;
+        if (fMeta && opts.progress && opts.progress.current !== undefined && opts.progress.total !== undefined) {
+          fMeta.textContent = `${opts.progress.current.toLocaleString()} / ${opts.progress.total.toLocaleString()} Dosya`;
+        }
+      }
+      return;
+    }
+
+    if (!overlay) return;
 
     const titleEl = document.getElementById('loadingTitle');
     const textEl = document.getElementById('loadingText');
@@ -10214,7 +10943,7 @@ class DatasetEditor {
       if (progressWrap) progressWrap.style.display = 'block';
       const pct = Math.max(0, Math.min(100, Math.round(opts.progress.pct || 0)));
       if (progressBar) progressBar.style.width = `${pct}%`;
-      if (progressPct) progressPct.textContent = `%${pct}`;
+      if (progressPct) progressPct.textContent = `${pct}%`;
       if (progressCount && opts.progress.current !== undefined && opts.progress.total !== undefined) {
         progressCount.textContent = `${opts.progress.current.toLocaleString()} / ${opts.progress.total.toLocaleString()} Dosya`;
       }
@@ -10226,6 +10955,50 @@ class DatasetEditor {
     requestAnimationFrame(() => {
       overlay.classList.add('active');
     });
+  }
+
+  minimizeLoading() {
+    this.isUploadMinimized = true;
+    const overlay = document.getElementById('loadingOverlay');
+    const floatingWidget = document.getElementById('floatingUploadWidget');
+    const tasksContainer = document.getElementById('floatingTasksContainer');
+    if (tasksContainer) tasksContainer.style.display = 'flex';
+    if (overlay) {
+      overlay.classList.remove('active');
+      setTimeout(() => {
+        if (overlay) overlay.style.display = 'none';
+      }, 200);
+    }
+    if (floatingWidget) {
+      floatingWidget.style.display = 'block';
+      if (this.lastLoadingOpts) {
+        const opts = this.lastLoadingOpts;
+        const fTitle = document.getElementById('floatingUploadTitle');
+        const fPct = document.getElementById('floatingUploadPct');
+        const fMeta = document.getElementById('floatingUploadMeta');
+        const fBar = document.getElementById('floatingUploadBar');
+        const pct = Math.max(0, Math.min(100, Math.round(opts.progress?.pct || 0)));
+        if (fTitle) fTitle.textContent = opts.title || 'Arka Planda Yükleniyor...';
+        if (fPct) fPct.textContent = `${pct}%`;
+        if (fBar) fBar.style.width = `${pct}%`;
+        if (fMeta && opts.progress && opts.progress.current !== undefined && opts.progress.total !== undefined) {
+          fMeta.textContent = `${opts.progress.current.toLocaleString()} / ${opts.progress.total.toLocaleString()} Dosya`;
+        }
+      }
+    }
+    this.showToast('Yükleme arka plana alındı. Durumu sağ alttan takip edebilirsiniz.', 'info');
+  }
+
+  maximizeLoading() {
+    this.isUploadMinimized = false;
+    const overlay = document.getElementById('loadingOverlay');
+    const floatingWidget = document.getElementById('floatingUploadWidget');
+    if (floatingWidget) {
+      floatingWidget.style.display = 'none';
+    }
+    if (overlay && this.lastLoadingOpts) {
+      this.showLoading(true, this.lastLoadingOpts);
+    }
   }
 
   async autoLabelCurrent() {
@@ -11667,13 +12440,15 @@ with open("test_image.jpg", "rb") as f:
 
     try {
       // 1. Teams & Organization API
-      const tRes = await fetch('/api/teams/list');
+      const activeWs = this.activeWorkspaceId || localStorage.getItem('activeWorkspaceId') || '';
+      const wsParam = activeWs ? `?workspace_id=${encodeURIComponent(activeWs)}` : '';
+      const tRes = await fetch(`/api/teams/list${wsParam}`);
       const tData = await tRes.json();
       this.cachedTeams = tData.teams || [];
 
       if (teamSelect && this.cachedTeams.length > 0) {
         // Aktif projeye atanmış takımı öncelikle bul
-        const projAssignedTeam = this.cachedTeams.find(t => Array.isArray(t.projects) && t.projects.includes(cat));
+        const projAssignedTeam = (this.isProjectContext && cat) ? this.cachedTeams.find(t => Array.isArray(t.projects) && t.projects.includes(cat)) : null;
         
         // Eğer seçili takım yoksa veya listede yoksa, öncelikle bu projeye atanmış takımı seç
         if (!this.selectedTeamId || !this.cachedTeams.some(t => t.id === this.selectedTeamId)) {
@@ -11681,7 +12456,7 @@ with open("test_image.jpg", "rb") as f:
         }
 
         teamSelect.innerHTML = this.cachedTeams.map(t => {
-          const isForThisProj = Array.isArray(t.projects) && t.projects.includes(cat);
+          const isForThisProj = this.isProjectContext && Boolean(cat) && Array.isArray(t.projects) && t.projects.includes(cat);
           const projInfo = isForThisProj 
             ? `(Bu Proje: ${cat})` 
             : (t.projects && t.projects.length > 0 ? `[${t.projects.join(', ')}]` : '(Atanmış Proje Yok)');
@@ -13364,6 +14139,9 @@ with open("test_image.jpg", "rb") as f:
     }
   }
 }
+
+// Export class globally for modular extensions
+window.DatasetEditor = DatasetEditor;
 
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', () => {

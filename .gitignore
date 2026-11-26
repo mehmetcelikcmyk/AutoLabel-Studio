@@ -1,4 +1,4 @@
-﻿# === HASSAS DOSYALAR - ASLA PUSH ETME ===
+# === HASSAS DOSYALAR - ASLA PUSH ETME ===
 .env
 .env.*
 !.env.example
@@ -8,10 +8,18 @@ client_secret*.json
 *token*
 *password*
 users.json
+users.db
+*.db
+*.sqlite
+*.bak
+*.bak.js
+.backups/
 teams.json
 team_tasks.json
 ai_chat_history.json
 settings.json
+app_monolithic_backup.py
+
 
 # Buyuk model ve veri dosyalari
 *.pt
