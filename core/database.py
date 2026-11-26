@@ -232,6 +232,40 @@ def cf_r2_delete_object(object_key: str) -> bool:
     except Exception:
         return False
 
+
+def cf_r2_delete_prefix(prefix: str) -> int:
+    """Delete all objects in Cloudflare R2 under the given prefix using 1000-key batch deletes."""
+    deleted_total = 0
+    try:
+        settings = load_settings()
+        account_id = settings.get("cloudflare_account_id", "")
+        bucket = settings.get("cloudflare_r2_bucket", "")
+        access_key = settings.get("cloudflare_r2_access_key_id", "")
+        secret_key = settings.get("cloudflare_r2_secret_access_key", "")
+        if not all((account_id, bucket, access_key, secret_key)):
+            return 0
+        safe_prefix = "/".join(part for part in prefix.split("/") if part and part not in (".", ".."))
+        if not safe_prefix or ".." in safe_prefix:
+            return 0
+        safe_prefix = safe_prefix.rstrip("/") + "/"
+        client = _get_r2_client(account_id, access_key, secret_key)
+        if not client:
+            return 0
+        paginator = client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=bucket, Prefix=safe_prefix):
+            contents = page.get("Contents", [])
+            if not contents:
+                continue
+            keys = [{"Key": obj["Key"]} for obj in contents if obj.get("Key")]
+            for i in range(0, len(keys), 1000):
+                chunk = keys[i:i + 1000]
+                client.delete_objects(Bucket=bucket, Delete={"Objects": chunk, "Quiet": True})
+                deleted_total += len(chunk)
+        return deleted_total
+    except Exception as e:
+        print(f"[R2 Delete Prefix Warning] {prefix}: {e}")
+        return deleted_total
+
 def cf_r2_list_objects(prefix: str = "", limit: int = 2000) -> List[Dict[str, Any]]:
     """Cloudflare R2 bucket'ındaki objeleri listeler."""
     try:

@@ -20,7 +20,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Query, Header
 
 from core.config import ROOT_DIR, MAX_PROJECTS_PER_USER
-from core.database import cf_d1_query
+from core.database import cf_d1_query, cf_r2_delete_prefix
 from core.security import (
     get_current_user,
     is_admin_user,
@@ -431,10 +431,23 @@ def delete_project(req: DeleteProjectRequest, authorization: Optional[str] = Hea
 
     try:
         cf_d1_query("DELETE FROM projects WHERE id = ?", [cat_name])
+        cf_d1_query("DELETE FROM project_batches WHERE project_id = ?", [cat_name])
+        cf_d1_query("DELETE FROM project_members WHERE project_id = ?", [cat_name])
     except Exception as e:
         print(f"[D1 Project Delete Warning] {e}")
 
+    r2_deleted = 0
     if req.delete_files:
+        # Bulut (Cloudflare R2) kalıntılarını da tamamen temizle ki aynı isimle yeni proje açılınca eski veriler dönmesin
+        try:
+            from api.shared.utils import get_project_storage_info
+            st = get_project_storage_info(cat_name)
+            r2_deleted += cf_r2_delete_prefix(st["r2_project_prefix"])
+            if st["r2_project_prefix"].strip("/") != cat_name.strip("/"):
+                r2_deleted += cf_r2_delete_prefix(cat_name)
+        except Exception as r2_err:
+            print(f"[R2 Project Delete Warning] {r2_err}")
+
         try:
             cat_dir = safe_project_path(cat_name)
             labeled_dir = safe_project_path(f"{cat_name}_labeled")
@@ -445,7 +458,13 @@ def delete_project(req: DeleteProjectRequest, authorization: Optional[str] = Hea
         except Exception:
             pass
 
-    return {"status": "ok", "deleted_category": cat_name}
+    try:
+        from api.projects.images import invalidate_images_cache
+        invalidate_images_cache(cat_name)
+    except Exception:
+        pass
+
+    return {"status": "ok", "deleted_category": cat_name, "r2_deleted_count": r2_deleted}
 
 
 @router.post("/api/projects/rename")

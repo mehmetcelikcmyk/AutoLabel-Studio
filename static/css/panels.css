@@ -76,7 +76,7 @@
     /* ══════════════════════════════════════════════════════════════════════════
        AI CHAT ROOM VIEWPORT LOCK & ZERO-OVERFLOW SCROLL ARCHITECTURE
     ══════════════════════════════════════════════════════════════════════════ */
-    #agentWorkspaceView.in-chat-mode {
+    #agentWorkspaceView.active.in-chat-mode {
       height: 100vh !important;
       max-height: 100vh !important;
       overflow: hidden !important;
