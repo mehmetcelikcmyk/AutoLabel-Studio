@@ -570,6 +570,7 @@ def delete_batch(data: dict, authorization: Optional[str] = Header(None)):
                     imgs_to_delete = list(all_imgs)
 
                 if delete_images and imgs_to_delete:
+                    r2_keys_to_delete = []
                     for img_name in imgs_to_delete:
                         img_path = cat_dir / img_name
                         if img_path.exists() and img_path.is_file():
@@ -597,13 +598,16 @@ def delete_batch(data: dict, authorization: Optional[str] = Header(None)):
                                 except Exception:
                                     pass
 
-                        try:
-                            cf_r2_delete_object(f"{storage['r2_images_prefix']}/{img_name}")
-                            cf_r2_delete_object(f"{cat}/{img_name}")
-                            cf_r2_delete_object(f"{storage['r2_labels_prefix']}/{txt_name}")
-                            cf_r2_delete_object(f"{cat}_labeled/labels/{txt_name}")
-                        except Exception as r2_del_err:
-                            print(f"[R2 Delete Object Warning]: {r2_del_err}")
+                        r2_keys_to_delete.append(f"{storage['r2_images_prefix']}/{img_name}")
+                        r2_keys_to_delete.append(f"{cat}/{img_name}")
+                        r2_keys_to_delete.append(f"{storage['r2_labels_prefix']}/{txt_name}")
+                        r2_keys_to_delete.append(f"{cat}_labeled/labels/{txt_name}")
+
+                    try:
+                        from core.database import cf_r2_delete_keys
+                        cf_r2_delete_keys(r2_keys_to_delete)
+                    except Exception as r2_del_err:
+                        print(f"[R2 Batch Delete Warning]: {r2_del_err}")
 
                 delete_set = set(imgs_to_delete)
                 new_all_imgs = [img for img in all_imgs if img not in delete_set]

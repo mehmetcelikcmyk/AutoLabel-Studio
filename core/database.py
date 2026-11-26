@@ -233,6 +233,41 @@ def cf_r2_delete_object(object_key: str) -> bool:
         return False
 
 
+def cf_r2_delete_keys(object_keys: List[str]) -> int:
+    """Batch-delete arbitrary R2 object keys (up to 1000 keys per single S3 request)."""
+    if not object_keys:
+        return 0
+    deleted_total = 0
+    try:
+        settings = load_settings()
+        account_id = settings.get("cloudflare_account_id", "")
+        bucket = settings.get("cloudflare_r2_bucket", "")
+        access_key = settings.get("cloudflare_r2_access_key_id", "")
+        secret_key = settings.get("cloudflare_r2_secret_access_key", "")
+        if not all((account_id, bucket, access_key, secret_key)):
+            return 0
+        clean_keys = []
+        seen = set()
+        for raw_key in object_keys:
+            safe_key = "/".join(part for part in str(raw_key).split("/") if part and part not in (".", ".."))
+            if safe_key and ".." not in safe_key and safe_key not in seen:
+                seen.add(safe_key)
+                clean_keys.append({"Key": safe_key})
+        if not clean_keys:
+            return 0
+        client = _get_r2_client(account_id, access_key, secret_key)
+        if not client:
+            return 0
+        for i in range(0, len(clean_keys), 1000):
+            chunk = clean_keys[i:i + 1000]
+            client.delete_objects(Bucket=bucket, Delete={"Objects": chunk, "Quiet": True})
+            deleted_total += len(chunk)
+        return deleted_total
+    except Exception as e:
+        print(f"[R2 Batch Delete Warning]: {e}")
+        return deleted_total
+
+
 def cf_r2_delete_prefix(prefix: str) -> int:
     """Delete all objects in Cloudflare R2 under the given prefix using 1000-key batch deletes."""
     deleted_total = 0
