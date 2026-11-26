@@ -335,15 +335,23 @@ def launch_template_project(req: LaunchTemplateProjectRequest, authorization: Op
     try:
         created_at = datetime.now(timezone.utc).isoformat()
         cf_d1_query(
-            "INSERT OR REPLACE INTO projects (id, display_name, description, project_type, visibility, license, created_at, owner_email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            [folder_name, display_name, template_data.get("description", ""), "detection", "private", "CC BY 4.0", created_at, owner_email]
+            "INSERT OR REPLACE INTO projects (id, display_name, description, project_type, visibility, license, created_at, owner_email, classes_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [folder_name, display_name, template_data.get("description", ""), "detection", "private", "CC BY 4.0", created_at, owner_email, json.dumps(normalized_classes, ensure_ascii=False)]
         )
     except Exception as e:
         print(f"[D1 Project Sync from Template Warning] {e}")
 
     seeded_count = 0
+    seeded_filenames = []
     if req.include_demo_data and template_data.get("sample_images_json"):
         try:
+            import base64
+            import cv2
+            import numpy as np
+            from core.database import cf_r2_upload, cf_d1_save_batches
+            from api.shared.utils import get_project_storage_info
+
+            storage = get_project_storage_info(folder_name)
             sample_images = json.loads(template_data["sample_images_json"])
             class_name_to_id = {c["name"].lower(): c["id"] for c in normalized_classes}
 
@@ -356,10 +364,39 @@ def launch_template_project(req: LaunchTemplateProjectRequest, authorization: Op
                 txt_dest = labels_dir / f"demo_{t_id}_{idx + 1}.txt"
 
                 try:
-                    req_headers = {"User-Agent": "AutoLabelStudio/2.0"}
-                    request_obj = urllib.request.Request(img_url, headers=req_headers)
-                    with urllib.request.urlopen(request_obj, timeout=10) as response, open(img_dest, 'wb') as out_file:
-                        shutil.copyfileobj(response, out_file)
+                    if img_url.startswith("data:image/"):
+                        # Şablona özel sahneyi gerçek 800x600 JPEG görsele dönüştür
+                        canvas = np.zeros((600, 800, 3), dtype=np.uint8)
+                        canvas[:] = (30, 23, 15)
+                        for gx in range(80, 800, 80):
+                            cv2.line(canvas, (gx, 0), (gx, 600), (45, 38, 28), 1)
+                        for gy in range(60, 600, 60):
+                            cv2.line(canvas, (0, gy), (800, gy), (45, 38, 28), 1)
+                        cv2.rectangle(canvas, (20, 18), (780, 62), (18, 12, 8), -1)
+                        cv2.putText(canvas, f"{t_id.upper()} DEMO #{idx + 1}", (36, 46), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (240, 240, 240), 2)
+
+                        for box in sample.get("boxes", []):
+                            bx = int(float(box.get("x", 0.1)) * 800)
+                            by = int(float(box.get("y", 0.1)) * 600)
+                            bw = int(float(box.get("w", 0.2)) * 800)
+                            bh = int(float(box.get("h", 0.2)) * 600)
+                            hex_c = (box.get("color") or "#3b82f6").lstrip("#")
+                            bgr = (int(hex_c[4:6], 16), int(hex_c[2:4], 16), int(hex_c[0:2], 16)) if len(hex_c) == 6 else (246, 130, 59)
+                            overlay = canvas.copy()
+                            cv2.rectangle(overlay, (bx + 4, by + 4), (bx + bw - 4, by + bh - 4), bgr, -1)
+                            cv2.addWeighted(overlay, 0.28, canvas, 0.72, 0, canvas)
+                            cv2.rectangle(canvas, (bx + 4, by + 4), (bx + bw - 4, by + bh - 4), bgr, 2)
+                            cx_p, cy_p = bx + bw // 2, by + bh // 2
+                            cv2.circle(canvas, (cx_p, cy_p), max(14, min(bw, bh) // 4), bgr, -1)
+                            cname_ascii = str(box.get("class_name", "obj"))
+                            cv2.putText(canvas, cname_ascii, (max(10, bx + 12), max(28, by + 28)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
+
+                        cv2.imwrite(str(img_dest), canvas, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+                    else:
+                        req_headers = {"User-Agent": "AutoLabelStudio/2.0"}
+                        request_obj = urllib.request.Request(img_url, headers=req_headers)
+                        with urllib.request.urlopen(request_obj, timeout=10) as response, open(img_dest, 'wb') as out_file:
+                            shutil.copyfileobj(response, out_file)
 
                     lines = []
                     for box in sample.get("boxes", []):
@@ -378,9 +415,39 @@ def launch_template_project(req: LaunchTemplateProjectRequest, authorization: Op
                     if lines:
                         with open(txt_dest, "w", encoding="utf-8") as tf:
                             tf.writelines(lines)
+
+                    if storage.get("r2_configured"):
+                        if img_dest.exists():
+                            cf_r2_upload(img_dest.read_bytes(), f"{storage['r2_images_prefix']}/{safe_img_name}", "image/jpeg")
+                        if txt_dest.exists():
+                            cf_r2_upload(txt_dest.read_bytes(), f"{storage['r2_labels_prefix']}/{txt_dest.name}", "text/plain")
+
+                    seeded_filenames.append(safe_img_name)
                     seeded_count += 1
                 except Exception as dl_err:
                     print(f"[Demo Download Error for {safe_img_name}] {dl_err}")
+
+            if seeded_filenames:
+                dt_str = datetime.now().strftime("%d.%m.%Y at %H:%M")
+                demo_batch = [{
+                    "id": f"batch_demo_{t_id}",
+                    "name": f"{display_name} Demo Veri Seti",
+                    "created_at": dt_str,
+                    "images": seeded_filenames,
+                    "tags": "Hazır Şablon",
+                    "status": "completed",
+                    "approved_filenames": list(seeded_filenames),
+                    "approved_count": len(seeded_filenames),
+                    "annotated_count": len(seeded_filenames),
+                    "unassigned_count": 0,
+                    "total_count": len(seeded_filenames),
+                }]
+                batches_file = ROOT_DIR / f"{folder_name}_labeled" / "batches.json"
+                with open(batches_file, "w", encoding="utf-8") as bf:
+                    json.dump(demo_batch, bf, ensure_ascii=False, indent=2)
+                cf_d1_save_batches(folder_name, demo_batch)
+                if storage.get("r2_configured"):
+                    cf_r2_upload(batches_file.read_bytes(), f"{storage['r2_project_prefix']}/batches.json", "application/json")
         except Exception as parse_err:
             print(f"[Demo parse error] {parse_err}")
 

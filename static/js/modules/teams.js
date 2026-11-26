@@ -386,10 +386,10 @@ function installTeamsModule(DatasetEditor) {
         projectPermDesc.textContent = isCaptainOnly ? 'Bu takımın erişebileceği veri setlerini yapılandırın.' : 'Takımınızın erişim iznine sahip olduğu projeler.';
       }
 
-      // 3. "Yeni Takım Oluştur" butonu yetkilendirmesi
+      // 3. "Yeni Takım Oluştur" butonu yetkilendirmesi (Takım listesi ekranındaki ana buton her zaman görünür kalmalı)
       const createTeamBtn = document.getElementById('createTeamBtn');
       if (createTeamBtn) {
-        createTeamBtn.style.setProperty('display', isCaptainOnly ? 'inline-flex' : 'none', 'important');
+        createTeamBtn.style.setProperty('display', 'inline-flex', 'important');
       }
 
       // 3.1 "Takımı Sil" butonu yetkilendirmesi (Yalnızca Takım Kaptanı)
@@ -403,7 +403,7 @@ function installTeamsModule(DatasetEditor) {
       // 4. Üst Subnav Sekmeleri: Normal üyeye senkronizasyon gizlenir, Denetçi ve Kaptana onay paneli açılır
       const syncSubnavBtn = document.querySelector('.team-subnav-btn[data-subtab="teamSync"]');
       if (syncSubnavBtn) {
-        syncSubnavBtn.style.setProperty('display', canReviewOrDispatch ? 'inline-flex' : 'none', 'important');
+        syncSubnavBtn.style.setProperty('display', isCaptainOnly ? 'inline-flex' : 'none', 'important');
       }
       const dispatchSubnavBtn = document.querySelector('.team-subnav-btn[data-subtab="teamDispatch"]');
       if (dispatchSubnavBtn) {
@@ -413,10 +413,16 @@ function installTeamsModule(DatasetEditor) {
         }
       }
 
-      // 5. Görev Panelleri İzolasyonu: Normal etiketleyiciye yönetici atama formu ve onay bekleyenler gizlenir, Reviewer ve Kaptana görünür!
+      // 5. Görev Panelleri İzolasyonu: Normal etiketleyiciye yönetici atama formu ve onay bekleyenler gizlenir; Denetçiye yalnızca onay kuyruğu gösterilir, görev atama formu Kaptana aittir!
       const adminDispatchGrid = document.getElementById('teamAdminDispatchGrid');
+      const dispatchFormCard = document.getElementById('dispatchTaskForm')?.closest('div[style*="background:#0f172a"]');
       if (adminDispatchGrid) {
         adminDispatchGrid.style.setProperty('display', canReviewOrDispatch ? 'grid' : 'none', 'important');
+        if (dispatchFormCard) {
+          const canAssignTasks = isCaptainOnly || (isSystemAdmin && !isMember);
+          dispatchFormCard.style.display = canAssignTasks ? 'block' : 'none';
+          adminDispatchGrid.style.gridTemplateColumns = canAssignTasks ? '1fr 1fr' : '1fr';
+        }
       }
 
       // Render Active Members (Normal üyede silme butonu gösterilmez)
@@ -883,7 +889,7 @@ function installTeamsModule(DatasetEditor) {
     dispPane.style.display = activeTarget === 'teamDispatch' ? 'block' : 'none';
     if (activeTarget === 'teamDispatch') {
       const curEmail = (this.currentUser?.email || '').toLowerCase().trim();
-      const activeTeam = (this.teamsData && this.teamsData.teams) ? this.teamsData.teams.find(t => t.id === this.selectedTeamId) : null;
+      const activeTeam = (this.cachedTeams || []).find(t => t.id === this.selectedTeamId) || (this.cachedTeams || [])[0] || null;
       const matchedMember = activeTeam ? (activeTeam.members || []).find(m => 
         (m.email && m.email.toLowerCase() === curEmail) ||
         (m.username && (m.username.toLowerCase() === curEmail || curEmail.startsWith(m.username.toLowerCase())))
@@ -894,8 +900,14 @@ function installTeamsModule(DatasetEditor) {
       const canManageDispatch = !isAnnotator && (isCaptainOnly || matchedMember?.role === 'reviewer' || (isSystemAdmin && !isMember));
 
       const adminDispatchGrid = document.getElementById('teamAdminDispatchGrid');
+      const dispatchFormCard = document.getElementById('dispatchTaskForm')?.closest('div[style*="background:#0f172a"]');
       if (adminDispatchGrid) {
         adminDispatchGrid.style.setProperty('display', canManageDispatch ? 'grid' : 'none', 'important');
+        if (dispatchFormCard) {
+          const canAssignTasks = isCaptainOnly || (isSystemAdmin && !isMember);
+          dispatchFormCard.style.display = canAssignTasks ? 'block' : 'none';
+          adminDispatchGrid.style.gridTemplateColumns = canAssignTasks ? '1fr 1fr' : '1fr';
+        }
       }
       // Görev Dağıtımı sekmesine geçildiğinde metrikleri ve bekleyen teslimatları canlı yenile
       const effCat = this.getEffectiveCategory();
@@ -2293,43 +2305,6 @@ function installTeamsModule(DatasetEditor) {
       }
     } catch (err) {
       this.showToast('Bağlantı hatası', 'error');
-    } finally {
-      this.showLoading(false);
-    }
-  });
-
-  // 9. Snapshot Restore (Single & Quick)
-  document.getElementById('teamSnapshotsList')?.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.restore-single-snap-btn');
-    if (!btn) return;
-    const snapName = btn.dataset.snap;
-
-    const ok = await this.openAppConfirm({
-      title: 'Yedeğe Geri Dön',
-      message: `'${snapName}' güvenlik yedeğine dönmek istediğinize emin misiniz?`,
-      confirmText: 'Yedeği Yükle',
-      danger: true
-    });
-    if (!ok) return;
-
-    const cat = this.activeHubProjectId || this.currentCategory || 'accessory_detection_project';
-    this.showLoading(true, 'Yedek geri yükleniyor...');
-    try {
-      const res = await fetch('/api/projects/rollback-snapshot', {
-        method: 'POST',
-        headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ category: cat, snapshot_id: snapName })
-      });
-      const data = await res.json();
-      if (res.ok && data.status === 'ok') {
-        this.showToast(data.message, 'success');
-        this.loadTeamSyncHub();
-        if (this.currentCategory) this.loadCategoryImages();
-      } else {
-        this.showToast(data.detail || 'Geri yükleme başarısız', 'error');
-      }
-    } catch (err) {
-      this.showToast('Hata oluştu', 'error');
     } finally {
       this.showLoading(false);
     }

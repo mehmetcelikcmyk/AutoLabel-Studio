@@ -200,22 +200,11 @@ def list_teams(scope: Optional[str] = Query(None), workspace_id: Optional[str] =
                 is_member = True
                 break
 
-        # Kaptan veya resmi üye ise çalışma alanı filtresine göre ekle
         if is_captain or is_member:
-            if workspace_id:
-                if workspace_id.startswith("ws_team_"):
-                    # Takım Workspace'inde sadece o takımın kendisi görünür
-                    target_tid = workspace_id.replace("ws_team_", "")
-                    if t.get("id") != target_tid:
-                        continue
-                else:
-                    # Kişisel/Özel Workspace'te yalnızca kullanıcının kurduğu/kaptanı olduğu takımlar görünür
-                    # Başkalarının kurduğu (kullanıcının sadece üye olduğu) takımlar kişisel çalışma alanına sızamaz
-                    if not is_captain:
-                        continue
-                    t_ws = t.get("workspace_id")
-                    if t_ws and t_ws != workspace_id:
-                        continue
+            if workspace_id and workspace_id.startswith("ws_team_"):
+                target_tid = workspace_id.replace("ws_team_", "")
+                if t.get("id") != target_tid:
+                    continue
             filtered_teams.append(t)
 
         # Bekleyen davet kontrolü: Kullanıcı henüz takıma katılmamış ama bekleyen daveti var mı?
@@ -329,12 +318,14 @@ def add_team_member(req: AddMemberRequest, authorization: Optional[str] = Header
 
             # Kullanıcı zaten var mı? → rolünü güncelle, email'i de düzelt
             for m in team.get("members", []):
-                if m.get("username", "").lower() == req.username.lower():
+                m_un = (m.get("username") or "").lower().strip()
+                m_em = (m.get("email") or "").lower().strip()
+                if (req.username and m_un == req.username.lower().strip()) or (resolved_email and m_em == resolved_email) or (req.username and m_em == req.username.lower().strip()):
                     m["role"] = req.role
                     if resolved_email and not m.get("email"):
-                        m["email"] = resolved_email  # Eksik email'i tamamla
+                        m["email"] = resolved_email
                     _save_teams(data)
-                    return {"status": "ok", "message": f"'{req.username}' kullanıcısının rolü '{req.role}' olarak güncellendi."}
+                    return {"status": "ok", "message": f"'{m.get('display_name') or req.username}' kullanıcısının rolü '{req.role}' olarak güncellendi."}
 
             # Yeni üye ekle — email dahil
             team.setdefault("members", []).append({
@@ -961,11 +952,33 @@ def get_dataset_dispatch_stats(category: str, team_id: Optional[str] = None, aut
         raise HTTPException(status_code=401, detail="Oturum açmanız gerekmektedir.")
     cat_dir = ROOT_DIR / category
     labels_dir = ROOT_DIR / f"{category}_labeled" / "labels"
-    if not cat_dir.exists():
-        raise HTTPException(status_code=404, detail="Proje bulunamadı.")
 
     valid_ext = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
-    all_imgs = [f.name for f in cat_dir.iterdir() if f.suffix.lower() in valid_ext]
+    all_imgs_set = set()
+    if cat_dir.exists() and cat_dir.is_dir():
+        all_imgs_set.update(f.name for f in cat_dir.iterdir() if f.is_file() and f.suffix.lower() in valid_ext)
+
+    r2_labeled_stems = set()
+    try:
+        from core.database import cf_r2_list_objects
+        from api.shared.utils import get_project_storage_info
+        storage = get_project_storage_info(category)
+        if storage.get("r2_configured"):
+            r2_imgs = cf_r2_list_objects(prefix=storage["r2_images_prefix"] + "/", limit=2500)
+            for obj in r2_imgs:
+                fn = os.path.basename(obj.get("key", ""))
+                if os.path.splitext(fn)[1].lower() in valid_ext:
+                    all_imgs_set.add(fn)
+            r2_lbls = cf_r2_list_objects(prefix=storage["r2_labels_prefix"] + "/", limit=2500)
+            for obj in r2_lbls:
+                if obj.get("size", 0) > 0:
+                    fn = os.path.basename(obj.get("key", ""))
+                    if fn.endswith(".txt"):
+                        r2_labeled_stems.add(os.path.splitext(fn)[0])
+    except Exception:
+        pass
+
+    all_imgs = sorted(list(all_imgs_set))
     total_imgs = len(all_imgs)
 
     # Başkasına atanmış aktif görevler
@@ -981,7 +994,8 @@ def get_dataset_dispatch_stats(category: str, team_id: Optional[str] = None, aut
     for img_name in all_imgs:
         stem = os.path.splitext(img_name)[0]
         txt_path = labels_dir / f"{stem}.txt"
-        if txt_path.exists() and txt_path.stat().st_size > 0:
+        is_labeled = (txt_path.exists() and txt_path.stat().st_size > 0) or (stem in r2_labeled_stems)
+        if is_labeled:
             labeled_count += 1
         else:
             if img_name not in assigned_imgs:
@@ -1073,35 +1087,55 @@ def dispatch_task_to_user(req: DispatchTaskRequest, authorization: Optional[str]
 
     cat_dir = ROOT_DIR / req.category
     labels_dir = ROOT_DIR / f"{req.category}_labeled" / "labels"
-    if not cat_dir.exists():
-        raise HTTPException(status_code=404, detail="Proje bulunamadı.")
+    cat_dir.mkdir(parents=True, exist_ok=True)
+    labels_dir.mkdir(parents=True, exist_ok=True)
 
     # Güvenlik: assigned_to bu projeye atanmış bir takımın üyesi veya kaptan olmalı.
     # Admin bypass: admin herhangi birine atayabilir.
-    if not is_adm:
-        assigned_lower = req.assigned_to.strip().lower()
-        is_valid_assignee = False
-        for t in teams_data.get("teams", []):
-            if req.category in t.get("projects", []) or not t.get("projects"):
-                if (t.get("captain") or "").lower() == assigned_lower:
-                    is_valid_assignee = True
-                    break
-                for m in t.get("members", []):
-                    m_email = (m.get("email") or "").lower()
-                    m_user = (m.get("username") or "").lower()
-                    if assigned_lower in (m_email, m_user):
-                        is_valid_assignee = True
-                        break
-            if is_valid_assignee:
+    matched_team_id = None
+    assigned_lower = req.assigned_to.strip().lower()
+    is_valid_assignee = False
+    for t in teams_data.get("teams", []):
+        if req.category in t.get("projects", []) or not t.get("projects"):
+            if (t.get("captain") or "").lower() == assigned_lower:
+                is_valid_assignee = True
+                matched_team_id = t.get("id")
                 break
-        if not is_valid_assignee:
-            raise HTTPException(
-                status_code=400,
-                detail=f"'{req.assigned_to}' bu projeye atanmış bir takımın üyesi değil. Önce takıma eklenmesi gerekiyor."
-            )
+            for m in t.get("members", []):
+                m_email = (m.get("email") or "").lower()
+                m_user = (m.get("username") or "").lower()
+                if assigned_lower in (m_email, m_user):
+                    is_valid_assignee = True
+                    matched_team_id = t.get("id")
+                    break
+        if is_valid_assignee:
+            break
+    if not is_adm and not is_valid_assignee:
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{req.assigned_to}' bu projeye atanmış bir takımın üyesi değil. Önce takıma eklenmesi gerekiyor."
+        )
 
     valid_ext = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
-    all_imgs = sorted([f.name for f in cat_dir.iterdir() if f.suffix.lower() in valid_ext])
+    all_imgs_set = {f.name for f in cat_dir.iterdir() if f.is_file() and f.suffix.lower() in valid_ext}
+    r2_labeled_stems = set()
+    try:
+        from core.database import cf_r2_list_objects
+        from api.shared.utils import get_project_storage_info
+        storage = get_project_storage_info(req.category)
+        if storage.get("r2_configured"):
+            for obj in cf_r2_list_objects(prefix=storage["r2_images_prefix"] + "/", limit=2500):
+                fn = os.path.basename(obj.get("key", ""))
+                if os.path.splitext(fn)[1].lower() in valid_ext:
+                    all_imgs_set.add(fn)
+            for obj in cf_r2_list_objects(prefix=storage["r2_labels_prefix"] + "/", limit=2500):
+                if obj.get("size", 0) > 0:
+                    fn = os.path.basename(obj.get("key", ""))
+                    if fn.endswith(".txt"):
+                        r2_labeled_stems.add(os.path.splitext(fn)[0])
+    except Exception:
+        pass
+    all_imgs = sorted(list(all_imgs_set))
 
     # Hali hazırda başkasına atanmış görevlerdeki resimleri bul
     tasks = _load_team_tasks()
@@ -1118,7 +1152,7 @@ def dispatch_task_to_user(req: DispatchTaskRequest, authorization: Optional[str]
         for img_name in all_imgs:
             stem = os.path.splitext(img_name)[0]
             txt_path = labels_dir / f"{stem}.txt"
-            if txt_path.exists() and txt_path.stat().st_size > 0:
+            if (txt_path.exists() and txt_path.stat().st_size > 0) or (stem in r2_labeled_stems):
                 labeled_pool.append(img_name)
         
         import random
@@ -1132,7 +1166,8 @@ def dispatch_task_to_user(req: DispatchTaskRequest, authorization: Optional[str]
                 continue
             stem = os.path.splitext(img_name)[0]
             txt_path = labels_dir / f"{stem}.txt"
-            if not txt_path.exists() or txt_path.stat().st_size == 0:
+            is_labeled = (txt_path.exists() and txt_path.stat().st_size > 0) or (stem in r2_labeled_stems)
+            if not is_labeled:
                 selected_imgs.append(img_name)
                 if len(selected_imgs) >= req.count:
                     break
@@ -1154,6 +1189,7 @@ def dispatch_task_to_user(req: DispatchTaskRequest, authorization: Optional[str]
     task_id = f"task_{uuid.uuid4().hex}"
     new_task = {
         "id": task_id,
+        "team_id": matched_team_id,
         "title": f"{task_type_label}: {len(selected_imgs)} Görsel ({req.assigned_to})",
         "category": req.category,
         "assigned_to": req.assigned_to,
@@ -1282,11 +1318,26 @@ def get_my_tasks(username: str = Query(...), authorization: Optional[str] = Head
         total_imgs = len(imgs)
         labeled_count = 0
 
-        if labels_dir.exists() and total_imgs > 0:
+        r2_labeled_stems = set()
+        if total_imgs > 0 and cat:
+            try:
+                from core.database import cf_r2_list_objects
+                from api.shared.utils import get_project_storage_info
+                storage = get_project_storage_info(cat)
+                if storage.get("r2_configured"):
+                    for obj in cf_r2_list_objects(prefix=storage["r2_labels_prefix"] + "/", limit=2500):
+                        if obj.get("size", 0) > 0:
+                            fn = os.path.basename(obj.get("key", ""))
+                            if fn.endswith(".txt"):
+                                r2_labeled_stems.add(os.path.splitext(fn)[0])
+            except Exception:
+                pass
+
+        if total_imgs > 0:
             for img in imgs:
                 stem = os.path.splitext(img)[0]
                 txt_path = labels_dir / f"{stem}.txt"
-                if txt_path.exists() and txt_path.stat().st_size > 0:
+                if (txt_path.exists() and txt_path.stat().st_size > 0) or (stem in r2_labeled_stems):
                     labeled_count += 1
 
         t["labeled_count"] = labeled_count
@@ -1364,21 +1415,29 @@ def submit_task_to_admin(req: SubmitTaskRequest, authorization: Optional[str] = 
 
 @router.get("/api/team/pending-reviews")
 def get_pending_reviews(authorization: Optional[str] = Header(None)):
-    """Admin veya takım kaptanı için onay bekleyen görevlerin listesini döner."""
+    """Admin, takım kaptanı veya denetçi (reviewer) için onay bekleyen görevlerin listesini döner."""
     user = get_current_user(authorization)
     if not user:
         raise HTTPException(status_code=401, detail="Oturum açmanız gerekmektedir.")
-    user_email = (user.get("email") or "").lower()
+    user_email = (user.get("email") or "").lower().strip()
+    user_uname = (user.get("username") or user.get("display_name") or user_email.split("@")[0]).lower().strip()
     is_adm = is_admin_user(user, user_email)
     tasks = _load_team_tasks()
     if not is_adm:
-        # Kaptan kendi takımının görevlerini görebilir
         teams_data = _load_teams()
-        captained_team_ids = {
-            t.get("id") for t in teams_data.get("teams", [])
-            if (t.get("captain") or "").lower() == user_email
-        }
-        tasks = [t for t in tasks if t.get("team_id") in captained_team_ids]
+        allowed_team_ids = set()
+        allowed_categories = set()
+        for t in teams_data.get("teams", []):
+            if _is_team_captain_or_reviewer(t, user_email, user_uname):
+                if t.get("id"):
+                    allowed_team_ids.add(t.get("id"))
+                for p in t.get("projects", []):
+                    allowed_categories.add(p)
+        tasks = [
+            t for t in tasks
+            if (t.get("team_id") and t.get("team_id") in allowed_team_ids)
+            or (t.get("category") and t.get("category") in allowed_categories)
+        ]
     pending = [t for t in tasks if t.get("status") == "submitted"]
     all_recent = sorted(tasks, key=lambda x: x.get("created_at", ""), reverse=True)[:25]
     return {
@@ -1440,7 +1499,10 @@ def review_task_submission(req: ReviewTaskRequest, authorization: Optional[str] 
     if not is_adm:
         teams_data = _load_teams()
         t_id = found_task.get("team_id")
+        t_cat = found_task.get("category")
         target_team = next((t for t in teams_data.get("teams", []) if t.get("id") == t_id), None)
+        if not target_team and t_cat:
+            target_team = next((t for t in teams_data.get("teams", []) if t_cat in t.get("projects", []) and _is_team_captain_or_reviewer(t, current_email, current_username)), None)
         if not target_team or not _is_team_captain_or_reviewer(target_team, current_email, current_username):
             raise HTTPException(status_code=403, detail="Bu görevi yalnızca takım kaptanı, denetçi (reviewer) veya sistem yöneticisi inceleyip onaylayabilir.")
 
@@ -1790,6 +1852,8 @@ def quick_merge_task_pack(req: QuickMergeTaskRequest, authorization: Optional[st
         t_id = found_task.get("team_id")
         user_uname = (user.get("username") or user.get("display_name") or user_email.split("@")[0]).lower()
         target_team = next((team for team in teams_data.get("teams", []) if team.get("id") == t_id), None)
+        if not target_team and actual_category:
+            target_team = next((team for team in teams_data.get("teams", []) if actual_category in team.get("projects", []) and _is_team_captain_or_reviewer(team, user_email, user_uname)), None)
         if not target_team or not _is_team_captain_or_reviewer(target_team, user_email, user_uname):
             raise HTTPException(status_code=403, detail="Yalnızca takım kaptanı, denetçi (reviewer) veya sistem yöneticisi bu paketi birleştirebilir.")
 
@@ -2038,78 +2102,6 @@ def claim_next_batch(req: ClaimNextBatchRequest, authorization: Optional[str] = 
         "claimed_count": len(claimed_imgs),
         "images": claimed_imgs,
         "message": f"{len(claimed_imgs)} adet görsel '{req.user_name}' adına başarıyla kilitlendi."
-    }
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# KAPTANLIK DEVRETME (TRANSFER CAPTAINCY)
-# ─────────────────────────────────────────────────────────────────────────────
-
-class TransferCaptaincyRequest(BaseModel):
-    team_id: str
-    new_captain_email: str
-
-@router.post("/api/teams/transfer-captaincy")
-def transfer_captaincy(req: TransferCaptaincyRequest, authorization: Optional[str] = Header(None)):
-    """
-    Takım kaptanlığını başka bir aktif üyeye devreder.
-    Sadece mevcut takım kaptanı veya süper yönetici devir yapabilir.
-    """
-    user = get_current_user(authorization)
-    if not user:
-        raise HTTPException(status_code=401, detail="Oturum açmanız gerekmektedir.")
-
-    email = (user.get("email") or "").lower().strip()
-    is_adm = is_admin_user(user, email)
-
-    data = _load_teams()
-    team = None
-    for t in data.get("teams", []):
-        if t.get("id") == req.team_id:
-            team = t
-            break
-
-    if not team:
-        raise HTTPException(status_code=404, detail="Takım bulunamadı.")
-
-    cur_capt = (team.get("captain") or "").lower().strip()
-    if not is_adm and cur_capt != email:
-        raise HTTPException(status_code=403, detail="Yalnızca mevcut takım kaptanı veya sistem yöneticisi kaptanlığı devredebilir.")
-
-    target_email = req.new_captain_email.lower().strip()
-    if cur_capt == target_email:
-        raise HTTPException(status_code=400, detail="Belirtilen kullanıcı zaten takımın kaptanı.")
-
-    # Yeni kaptanın mevcut bir üye olduğunu doğrula
-    target_member = None
-    for m in team.get("members", []):
-        m_email = (m.get("email") or "").lower().strip()
-        m_user = (m.get("username") or "").lower().strip()
-        if (m_email and m_email == target_email) or (m_user and m_user == target_email):
-            target_member = m
-            break
-
-    if not target_member:
-        raise HTTPException(status_code=400, detail="Kaptanlık devredilecek kullanıcı bu takımın kayıtlı bir üyesi değil.")
-
-    old_captain = team.get("captain")
-    # Yeni kaptanı ata
-    team["captain"] = target_email
-    target_member["role"] = "captain"
-
-    # Eski kaptanı takım üyesi (reviewer) olarak güncelle
-    for m in team.get("members", []):
-        m_email = (m.get("email") or "").lower().strip()
-        if m_email == cur_capt and m_email != target_email:
-            m["role"] = "reviewer"
-
-    _save_teams(data)
-
-    return {
-        "status": "ok",
-        "message": f"Takım kaptanlığı başarıyla '{target_email}' kullanıcısına devredildi.",
-        "old_captain": old_captain,
-        "new_captain": target_email
     }
 
 

@@ -428,7 +428,7 @@ openTemplatePreviewModal(templateId) {
       try {
         launchBtn.disabled = true;
         launchBtn.innerHTML = '<span>Proje Hazırlanıyor...</span>';
-        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        const token = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
