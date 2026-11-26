@@ -1,5 +1,5 @@
 {
-  "name": "YOLO Editör (AutoLabel Studio) — Yapay Zeka Veri Seti Etiketleme Platformu",
+  "name": "YOLO Editör — Yapay Zeka Veri Seti Etiketleme Platformu",
   "short_name": "YOLO Editör",
   "description": "YOLOv8, YOLOv11, YOLO-World ve Segment Anything (SAM) destekli otomatik görüntü etiketleme, nesne tespiti, poligon maskeleme ve veri seti hazırlama platformu.",
   "start_url": "/",
