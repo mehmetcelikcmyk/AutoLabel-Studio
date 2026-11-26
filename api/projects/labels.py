@@ -18,6 +18,7 @@ from core.database import (
     cf_r2_get_object,
     cf_r2_delete_object,
     cf_d1_save_batches,
+    cf_d1_load_batches,
 )
 from core.security import check_project_permission
 from api.shared.models import SaveLabelRequest
@@ -123,10 +124,27 @@ def save_label(req: SaveLabelRequest, authorization: Optional[str] = Header(None
 
             try:
                 batches_file = labeled_dir / "batches.json"
+                b_data = []
                 if batches_file.exists():
-                    with open(batches_file, "r", encoding="utf-8") as bf:
-                        b_data = json.load(bf)
-
+                    try:
+                        with open(batches_file, "r", encoding="utf-8") as bf:
+                            b_data = json.load(bf)
+                    except Exception:
+                        b_data = []
+                if not b_data:
+                    try:
+                        b_data = cf_d1_load_batches(req.category) or []
+                    except Exception:
+                        b_data = []
+                if not b_data:
+                    try:
+                        st_tmp = get_project_storage_info(req.category)
+                        r2_b = cf_r2_get_object(f"{st_tmp['r2_project_prefix']}/batches.json")
+                        if r2_b:
+                            b_data = json.loads(r2_b.decode("utf-8"))
+                    except Exception:
+                        b_data = []
+                if b_data:
                     cat_dir_for_save = ROOT_DIR / req.category
                     disk_img_names = set()
                     if cat_dir_for_save.exists():
@@ -219,10 +237,27 @@ def save_label(req: SaveLabelRequest, authorization: Optional[str] = Header(None
 
         try:
             batches_file = labeled_dir / "batches.json"
+            b_data = []
             if batches_file.exists():
-                with open(batches_file, "r", encoding="utf-8") as bf:
-                    b_data = json.load(bf)
-
+                try:
+                    with open(batches_file, "r", encoding="utf-8") as bf:
+                        b_data = json.load(bf)
+                except Exception:
+                    b_data = []
+            if not b_data:
+                try:
+                    b_data = cf_d1_load_batches(req.category) or []
+                except Exception:
+                    b_data = []
+            if not b_data:
+                try:
+                    st_tmp = get_project_storage_info(req.category)
+                    r2_b = cf_r2_get_object(f"{st_tmp['r2_project_prefix']}/batches.json")
+                    if r2_b:
+                        b_data = json.loads(r2_b.decode("utf-8"))
+                except Exception:
+                    b_data = []
+            if b_data:
                 cat_dir_for_save = ROOT_DIR / req.category
                 disk_img_names_save = set()
                 if cat_dir_for_save.exists():
@@ -263,19 +298,16 @@ def save_label(req: SaveLabelRequest, authorization: Optional[str] = Header(None
                 if changed:
                     with open(batches_file, "w", encoding="utf-8") as bf:
                         json.dump(b_data, bf, ensure_ascii=False, indent=2)
+                    try:
+                        cf_d1_save_batches(req.category, b_data)
+                    except Exception as d1_err:
+                        print(f"[D1 Save Batches Error]: {d1_err}")
         except Exception as b_sync_err:
             print(f"[Batches sync warning]: {b_sync_err}")
 
         # Bulut yedeklemesini (R2 ve D1) arka plan iş parçacığına devret; UI'ı asla bekletme
         def _bg_cloud_sync():
             try:
-                if batches_file.exists():
-                    with open(batches_file, "r", encoding="utf-8") as bf:
-                        b_json = json.load(bf)
-                    try:
-                        cf_d1_save_batches(req.category, b_json)
-                    except Exception as d1_err:
-                        print(f"[D1 Save Batches Error]: {d1_err}")
                 storage = get_project_storage_info(req.category)
                 r2_txt_key = f"{storage['r2_labels_prefix']}/{stem}.txt"
                 if txt_path.exists():

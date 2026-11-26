@@ -421,10 +421,12 @@ def get_project_batches(category: str = Query(...), token: Optional[str] = Query
     except Exception as e:
         print(f"[Batches] team_tasks D1 merge hatası: {e}")
 
-    if batches_updated and batches_file.exists():
+    if batches_updated:
         try:
+            batches_file.parent.mkdir(parents=True, exist_ok=True)
             with open(batches_file, "w", encoding="utf-8") as f:
                 json.dump(batches, f, ensure_ascii=False, indent=2)
+            cf_d1_save_batches(category, batches)
             storage = get_project_storage_info(category)
             cf_r2_upload(batches_file.read_bytes(), f"{storage['r2_project_prefix']}/batches.json", "application/json")
         except Exception:
@@ -456,6 +458,15 @@ def rename_batch(data: dict, authorization: Optional[str] = Header(None)):
     if not batches:
         try:
             batches = cf_d1_load_batches(cat) or []
+        except Exception:
+            batches = []
+
+    if not batches:
+        try:
+            storage = get_project_storage_info(cat)
+            r2_b = cf_r2_get_object(f"{storage['r2_project_prefix']}/batches.json")
+            if r2_b:
+                batches = json.loads(r2_b.decode("utf-8"))
         except Exception:
             batches = []
 
@@ -499,6 +510,15 @@ def update_batch_tags(data: dict, authorization: Optional[str] = Header(None)):
     if not batches:
         try:
             batches = cf_d1_load_batches(cat) or []
+        except Exception:
+            batches = []
+
+    if not batches:
+        try:
+            storage = get_project_storage_info(cat)
+            r2_b = cf_r2_get_object(f"{storage['r2_project_prefix']}/batches.json")
+            if r2_b:
+                batches = json.loads(r2_b.decode("utf-8"))
         except Exception:
             batches = []
 
@@ -552,6 +572,15 @@ def delete_batch(data: dict, authorization: Optional[str] = Header(None)):
     if not batches:
         try:
             batches = cf_d1_load_batches(cat) or []
+        except Exception:
+            batches = []
+
+    if not batches:
+        try:
+            storage = get_project_storage_info(cat)
+            r2_b = cf_r2_get_object(f"{storage['r2_project_prefix']}/batches.json")
+            if r2_b:
+                batches = json.loads(r2_b.decode("utf-8"))
         except Exception:
             batches = []
 
@@ -682,6 +711,15 @@ def move_batch_stage(data: dict, authorization: Optional[str] = Header(None)):
     if not batches:
         try:
             batches = cf_d1_load_batches(cat) or []
+        except Exception:
+            batches = []
+
+    if not batches:
+        try:
+            storage = get_project_storage_info(cat)
+            r2_b = cf_r2_get_object(f"{storage['r2_project_prefix']}/batches.json")
+            if r2_b:
+                batches = json.loads(r2_b.decode("utf-8"))
         except Exception:
             batches = []
 

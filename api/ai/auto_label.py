@@ -117,6 +117,8 @@ def _resolve_cls_list(category: str, config: Dict) -> List[Dict]:
 
 
 def _get_imgsz(h: int, w: int) -> int:
+    if "cuda" not in str(_ACTIVE_DEVICE):
+        return 640
     max_dim = max(h, w)
     if max_dim >= 1400:
         return 1280

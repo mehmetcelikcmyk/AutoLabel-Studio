@@ -1232,7 +1232,12 @@ renderLoupe(pt) {
         class_id: (this.activeClassId !== undefined && this.activeClassId !== null) ? this.activeClassId : 0
       })
     });
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (_) {
+      data = { detail: `Sunucu yanıtı okunamadı (HTTP ${res.status})` };
+    }
     if (res.ok && data.status === 'ok' && data.box) {
       this.saveHistory();
       const currentProj = this.projects?.find(p => p.id === cat);

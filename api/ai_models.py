@@ -85,6 +85,77 @@ _MODEL_LOCK = threading.Lock()
 _MODEL_CACHE: Dict[str, Any] = {}
 _ACTIVE_DEVICE: str = "cpu"
 _LAST_CLASSES: List[str] = []
+_CLIP_TEXT_ENCODER: Any = None
+_CLIP_TEXT_WEIGHTS_PATH = ROOT_DIR / "clip_vitb32_text_fp16.pt"
+
+
+def _encode_classes_lightweight(classes: List[str], device: str = "cpu"):
+    """
+    Encode text prompts for YOLO-World using ONLY the CLIP text transformer (126 MB FP16),
+    completely skipping the 350 MB CLIP vision backbone and TorchScript JIT duplication
+    that otherwise causes 1.4 GB RAM spikes and Linux OOM kills on Railway CPU containers.
+    """
+    global _CLIP_TEXT_ENCODER
+    import gc
+    import torch
+    import clip
+    from torch import nn
+    from clip.model import Transformer, LayerNorm
+
+    if _CLIP_TEXT_ENCODER is None:
+        if not _CLIP_TEXT_WEIGHTS_PATH.exists():
+            url = clip.clip._MODELS["ViT-B/32"]
+            mp = clip.clip._download(url, os.path.expanduser("~/.cache/clip"))
+            jm = torch.jit.load(mp, map_location="cpu").eval()
+            sd_half = {
+                k: v.half()
+                for k, v in jm.state_dict().items()
+                if not k.startswith("visual.") and k not in ("input_resolution", "context_length", "vocab_size", "logit_scale")
+            }
+            del jm
+            gc.collect()
+            try:
+                torch.save(sd_half, str(_CLIP_TEXT_WEIGHTS_PATH))
+            except Exception:
+                pass
+        else:
+            sd_half = torch.load(str(_CLIP_TEXT_WEIGHTS_PATH), map_location="cpu", weights_only=True)
+
+        mask = torch.empty(77, 77)
+        mask.fill_(float("-inf"))
+        mask.triu_(1)
+        mod = nn.Module()
+        mod.transformer = Transformer(width=512, layers=12, heads=8, attn_mask=mask)
+        mod.token_embedding = nn.Embedding(49408, 512)
+        mod.ln_final = LayerNorm(512)
+        mod.positional_embedding = nn.Parameter(torch.empty(77, 512))
+        mod.text_projection = nn.Parameter(torch.empty(512, 512))
+        mod.load_state_dict({k: v.float() for k, v in sd_half.items()})
+        del sd_half
+        mod.eval()
+        _CLIP_TEXT_ENCODER = mod
+        gc.collect()
+
+    mod = _CLIP_TEXT_ENCODER
+    tokens = clip.tokenize(classes, truncate=True)
+    with torch.no_grad():
+        feats_list = []
+        for tok_chunk in tokens.split(80):
+            x = mod.token_embedding(tok_chunk) + mod.positional_embedding
+            x = mod.transformer(x.permute(1, 0, 2)).permute(1, 0, 2)
+            x = mod.ln_final(x)
+            x = x[torch.arange(x.shape[0]), tok_chunk.argmax(dim=-1)] @ mod.text_projection
+            x = x / x.norm(p=2, dim=-1, keepdim=True)
+            feats_list.append(x)
+        txt_feats = feats_list[0] if len(feats_list) == 1 else torch.cat(feats_list, dim=0)
+        txt_feats = txt_feats.reshape(-1, len(classes), txt_feats.shape[-1]).to(device)
+
+    # Bellek kısıtlı CPU sunucularda kodlama biter bitmez metin modelini de serbest bırak
+    if "cuda" not in str(device):
+        _CLIP_TEXT_ENCODER = None
+        gc.collect()
+
+    return txt_feats
 
 def detect_device() -> str:
     """Auto-detect best available compute device (CUDA > MPS > CPU)."""
@@ -186,19 +257,25 @@ def get_ai_model(model_key: Optional[str] = None, device: Optional[str] = None):
 
 
 def set_classes_if_changed(model, classes: List[str]):
-    """Only call set_classes when class list actually changed (avoids GPU overhead and frees CLIP RAM on CPU)."""
+    """Only call set_classes when class list actually changed (uses lightweight text-only CLIP on CPU)."""
     global _LAST_CLASSES
+    if not classes:
+        return
     with _MODEL_LOCK:
-        if hasattr(model, "set_classes") and classes != _LAST_CLASSES:
+        if classes != _LAST_CLASSES:
             try:
-                model.set_classes(classes)
-                _LAST_CLASSES = list(classes)
-                # CLIP metin kodlayıcısı (~600 MB RAM) yalnızca set_classes sırasında gerekir;
-                # tahmin aşamasında bellekte tutmayıp Railway OOM çökmesini önle
-                if "cuda" not in str(_ACTIVE_DEVICE) and hasattr(model, "model") and hasattr(model.model, "clip_model"):
-                    model.model.clip_model = None
-                    import gc
-                    gc.collect()
+                inner = getattr(model, "model", None)
+                if inner is not None and hasattr(inner, "model"):
+                    device = next(inner.model.parameters()).device
+                    inner.txt_feats = _encode_classes_lightweight(classes, device=device)
+                    inner.model[-1].nc = len(classes)
+                    model.names = {i: c for i, c in enumerate(classes)}
+                    if hasattr(inner, "names"):
+                        inner.names = model.names
+                    _LAST_CLASSES = list(classes)
+                elif hasattr(model, "set_classes"):
+                    model.set_classes(classes)
+                    _LAST_CLASSES = list(classes)
             except Exception as e:
                 logger.warning(f"set_classes warning: {e}")
 

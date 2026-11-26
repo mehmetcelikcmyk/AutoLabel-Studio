@@ -37,6 +37,7 @@ from core.config import (
 from core.database import (
     cf_d1_query,
     cf_d1_save_batches,
+    cf_d1_load_batches,
     cf_r2_upload,
     cf_r2_get_object,
     cf_r2_delete_object,
@@ -209,6 +210,18 @@ def confirm_r2_upload(
             existing_batches = json.loads(batches_file.read_text(encoding="utf-8"))
         except Exception:
             existing_batches = []
+    if not existing_batches:
+        try:
+            existing_batches = cf_d1_load_batches(clean_category) or []
+        except Exception:
+            existing_batches = []
+    if not existing_batches:
+        try:
+            r2_b = cf_r2_get_object(f"{storage['r2_project_prefix']}/batches.json")
+            if r2_b:
+                existing_batches = json.loads(r2_b.decode("utf-8"))
+        except Exception:
+            existing_batches = []
 
     new_batch = {
         "id": f"batch_{int(time.time())}_{uuid.uuid4().hex[:6]}",
@@ -345,6 +358,19 @@ async def upload_project_images(
                     batches = json.load(f)
             except Exception:
                 batches = []
+        if not batches:
+            try:
+                batches = cf_d1_load_batches(clean_category) or []
+            except Exception:
+                batches = []
+        if not batches:
+            try:
+                st_tmp = get_project_storage_info(clean_category)
+                r2_b = cf_r2_get_object(f"{st_tmp['r2_project_prefix']}/batches.json")
+                if r2_b:
+                    batches = json.loads(r2_b.decode("utf-8"))
+            except Exception:
+                batches = []
 
         now_dt = datetime.now()
         dt_str = now_dt.strftime("%d.%m.%Y at %H:%M")
@@ -383,6 +409,10 @@ async def upload_project_images(
         try:
             with open(batches_file, "w", encoding="utf-8") as f:
                 json.dump(batches, f, ensure_ascii=False, indent=2)
+            cf_d1_save_batches(clean_category, batches)
+            st_info = get_project_storage_info(clean_category)
+            if st_info.get("r2_configured"):
+                cf_r2_upload(batches_file.read_bytes(), f"{st_info['r2_project_prefix']}/batches.json", "application/json")
         except Exception:
             pass
 

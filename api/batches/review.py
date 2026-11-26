@@ -107,6 +107,15 @@ def complete_batch(data: dict, authorization: Optional[str] = Header(None)):
         except Exception:
             batches = []
 
+    if not batches:
+        try:
+            storage = get_project_storage_info(cat)
+            r2_b = cf_r2_get_object(f"{storage['r2_project_prefix']}/batches.json")
+            if r2_b:
+                batches = json.loads(r2_b.decode("utf-8"))
+        except Exception:
+            batches = []
+
     if batches:
         try:
             new_batches = []
@@ -210,6 +219,15 @@ def reset_batch_approval(data: dict, authorization: Optional[str] = Header(None)
     if not batches:
         try:
             batches = cf_d1_load_batches(cat) or []
+        except Exception:
+            batches = []
+
+    if not batches:
+        try:
+            storage = get_project_storage_info(cat)
+            r2_b = cf_r2_get_object(f"{storage['r2_project_prefix']}/batches.json")
+            if r2_b:
+                batches = json.loads(r2_b.decode("utf-8"))
         except Exception:
             batches = []
 

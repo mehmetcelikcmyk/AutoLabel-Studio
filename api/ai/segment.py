@@ -13,7 +13,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, Header
 
 from core.security import check_project_permission
-from api.ai_models import get_ai_model
+from api.ai_models import get_ai_model, set_classes_if_changed
 from api.ai.auto_label import (
     _load_image_with_r2_fallback,
     _resolve_cls_list,
@@ -278,12 +278,9 @@ def smart_segment_click(req: SmartSegmentRequest, authorization: Optional[str] =
     try:
         model, _ = get_ai_model("yolov8s-worldv2")
         if all_prompts:
-            try:
-                model.set_classes(all_prompts)
-            except Exception:
-                pass
+            set_classes_if_changed(model, all_prompts)
 
-        res = model.predict(img_rgb, conf=0.05, verbose=False)[0]
+        res = model.predict(img_rgb, conf=0.05, imgsz=640, verbose=False)[0]
         if res.boxes and len(res.boxes) > 0:
             matching = []
             for box in res.boxes:

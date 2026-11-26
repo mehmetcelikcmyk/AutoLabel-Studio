@@ -24,7 +24,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir git+https://github.com/ultralytics/CLIP.git
+    pip install --no-cache-dir git+https://github.com/ultralytics/CLIP.git && \
+    python -c "import os, gc, torch, clip; url = clip.clip._MODELS['ViT-B/32']; mp = clip.clip._download(url, '/tmp'); jm = torch.jit.load(mp, map_location='cpu').eval(); sd = {k: v.half() for k, v in jm.state_dict().items() if not k.startswith('visual.') and k not in ('input_resolution', 'context_length', 'vocab_size', 'logit_scale')}; del jm; gc.collect(); torch.save(sd, '/app/clip_vitb32_text_fp16.pt'); os.remove(mp)"
 
 # Copy source code and assets
 COPY . .
