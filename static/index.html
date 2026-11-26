@@ -4,52 +4,128 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AutoLabel Studio (YOLO Editör) — Yapay Zeka Veri Seti &amp; Görüntü Etiketleme Platformu</title>
+  <title>AutoLabel Studio (YOLO Editör) — Yapay Zeka Veri Seti Etiketleme, Otomatik Görüntü Etiketleme &amp; YOLO Annotation Platformu</title>
   <meta name="description"
-    content="AutoLabel Studio ve YOLO Editör ile YOLOv8, YOLOv11, YOLO-World ve Segment Anything (SAM) destekli otomatik görüntü etiketleme, nesne tespiti, poligon maskeleme ve veri seti hazırlama platformu.">
+    content="AutoLabel Studio (YOLO Editör), YOLOv8, YOLOv11, YOLO-World ve Segment Anything (SAM) destekli ücretsiz yapay zeka görüntü etiketleme, otomatik fotoğraf etiketleme, nesne tespiti, poligon segmentasyon ve veri seti hazırlama platformudur. Roboflow, LabelImg, CVAT ve Label Studio alternatifi online etiketleme programı.">
   <meta name="keywords"
-    content="AutoLabel Studio, Auto Label Studio, YOLO Editor, YOLO Editör, veri seti etiketleme, görüntü etiketleme aracı, otomatik etiketleme, yapay zeka veri etiketleme, YOLOv8 etiketleme, YOLOv11 annotation, image annotation tool, dataset labeling platform, poligon etiketleme, Segment Anything SAM, COCO dataset export, Roboflow alternatifi">
-  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+    content="AutoLabel Studio, Auto Label Studio, YOLO Editor, YOLO Editör, veri seti etiketleme, görüntü etiketleme aracı, fotoğraf etiketleme programı, resim etiketleme sitesi, otomatik etiketleme, yapay zeka veri etiketleme, YOLOv8 etiketleme, YOLOv11 veri seti hazırlama, YOLO annotation tool, online image annotation, dataset labeling platform, bounding box çizme, poligon etiketleme, Segment Anything SAM, COCO JSON export, Pascal VOC XML, Roboflow alternatifi, LabelImg alternatifi, CVAT alternatifi, Label Studio alternatifi, bilgisayarlı görü veri seti">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="application-name" content="AutoLabel Studio">
+  <meta name="apple-mobile-web-app-title" content="AutoLabel Studio">
+  <meta name="theme-color" content="#090d16">
   <link rel="canonical" href="https://autolabelstudio.com/">
+  <link rel="alternate" hreflang="tr" href="https://autolabelstudio.com/">
+  <link rel="alternate" hreflang="x-default" href="https://autolabelstudio.com/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="AutoLabel Studio">
   <meta property="og:locale" content="tr_TR">
-  <meta property="og:title" content="AutoLabel Studio (YOLO Editör) — AI Veri Seti &amp; Görüntü Etiketleme Platformu">
-  <meta property="og:description" content="YOLOv8, YOLOv11 ve SAM destekli otomatik nesne tespiti, poligon maskeleme, mükerrer görsel temizliği ve takım tabanlı veri seti etiketleme stüdyosu.">
+  <meta property="og:title" content="AutoLabel Studio (YOLO Editör) — Yapay Zeka Veri Seti &amp; Otomatik Görüntü Etiketleme Platformu">
+  <meta property="og:description" content="YOLOv8, YOLOv11, YOLO-World ve SAM destekli otomatik nesne tespiti, poligon maskeleme, kopya görsel temizliği ve takım tabanlı ücretsiz veri seti etiketleme stüdyosu.">
   <meta property="og:url" content="https://autolabelstudio.com/">
   <meta property="og:image" content="https://autolabelstudio.com/logo.png">
+  <meta property="og:image:width" content="256">
+  <meta property="og:image:height" content="256">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="AutoLabel Studio (YOLO Editör) — AI Veri Seti Etiketleme Platformu">
-  <meta name="twitter:description" content="Yapay zeka destekli otomatik görüntü etiketleme, YOLO ve COCO veri seti hazırlama stüdyosu.">
+  <meta name="twitter:title" content="AutoLabel Studio (YOLO Editör) — AI Veri Seti &amp; Görüntü Etiketleme Platformu">
+  <meta name="twitter:description" content="Yapay zeka destekli otomatik görüntü etiketleme, YOLOv8, YOLOv11 ve COCO veri seti hazırlama stüdyosu.">
   <meta name="twitter:image" content="https://autolabelstudio.com/logo.png">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "AutoLabel Studio",
-    "alternateName": ["Auto Label Studio", "YOLO Editor", "YOLO Editör", "AutoLabel AI Dataset Studio"],
-    "url": "https://autolabelstudio.com/",
-    "image": "https://autolabelstudio.com/logo.png",
-    "applicationCategory": "DeveloperApplication",
-    "operatingSystem": "Web, Windows, Linux, macOS",
-    "inLanguage": ["tr", "en"],
-    "description": "YOLOv8, YOLOv11, YOLO-World ve Segment Anything (SAM) destekli yapay zeka görüntü etiketleme, otomatik nesne tespiti, poligon segmentasyon ve takım tabanlı veri seti yönetim platformu.",
-    "featureList": [
-      "YOLO-World sıfır-öğrenme otomatik nesne tespiti ve görüntü etiketleme",
-      "Segment Anything (SAM) akıllı poligon maskeleme",
-      "YOLOv8, YOLOv11, COCO JSON ve Pascal VOC veri seti dışa aktarma",
-      "Otomatik kopya görsel tespiti ve veri seti kalite analizi",
-      "Rol bazlı takım etiketleme ve kalite onay kuyruğu"
-    ],
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    }
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://autolabelstudio.com/#organization",
+        "name": "AutoLabel Studio",
+        "alternateName": ["Auto Label Studio", "YOLO Editor", "YOLO Editör"],
+        "url": "https://autolabelstudio.com/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://autolabelstudio.com/logo.png",
+          "width": 256,
+          "height": 256
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://autolabelstudio.com/#website",
+        "url": "https://autolabelstudio.com/",
+        "name": "AutoLabel Studio",
+        "alternateName": ["Auto Label Studio", "YOLO Editor", "YOLO Editör", "Yapay Zeka Veri Seti Etiketleme Platformu"],
+        "publisher": {
+          "@id": "https://autolabelstudio.com/#organization"
+        },
+        "inLanguage": "tr-TR"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://autolabelstudio.com/#software",
+        "name": "AutoLabel Studio",
+        "alternateName": ["Auto Label Studio", "YOLO Editor", "YOLO Editör", "AutoLabel AI Dataset Studio"],
+        "url": "https://autolabelstudio.com/",
+        "image": "https://autolabelstudio.com/logo.png",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Web, Windows, Linux, macOS",
+        "inLanguage": ["tr", "en"],
+        "publisher": {
+          "@id": "https://autolabelstudio.com/#organization"
+        },
+        "description": "YOLOv8, YOLOv11, YOLO-World ve Segment Anything (SAM) destekli ücretsiz yapay zeka görüntü etiketleme, otomatik fotoğraf etiketleme, nesne tespiti, poligon segmentasyon ve takım tabanlı veri seti hazırlama platformu.",
+        "featureList": [
+          "YOLO-World sıfır-öğrenme otomatik nesne tespiti ve görüntü etiketleme",
+          "Segment Anything (SAM) akıllı tek tıkla poligon maskeleme",
+          "YOLOv8, YOLOv11, COCO JSON, Pascal VOC XML ve CreateML veri seti dışa aktarma",
+          "Otomatik kopya görsel tespiti ve veri seti kalite analizi",
+          "Rol bazlı takım etiketleme, görev dağıtımı ve kalite onay kuyruğu",
+          "Roboflow, LabelImg, CVAT ve Label Studio uyumlu veri seti yönetimi"
+        ],
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://autolabelstudio.com/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "YOLO için görüntü ve fotoğraf etiketleme nasıl yapılır?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "AutoLabel Studio (YOLO Editör) üzerinde projenizi oluşturup görsellerinizi yükledikten sonra YOLO-World yapay zeka motoruyla nesneleri tek tıkla otomatik etiketleyebilir veya akıllı bölme aracıyla poligon ve bounding box çizebilirsiniz."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Ücretsiz otomatik veri seti etiketleme programı var mı?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "AutoLabel Studio tamamen ücretsiz bir online görüntü etiketleme ve veri seti hazırlama platformudur. Kurulum gerektirmeden tarayıcı üzerinden YOLOv8, YOLOv11, COCO JSON ve Pascal VOC formatlarında eğitime hazır veri seti çıktısı verir."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Roboflow, LabelImg ve CVAT yerine hangi etiketleme aracı kullanılabilir?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "AutoLabel Studio; Türkçe arayüzü, sıfır kurulum gerektiren bulut mimarisi, metin komutuyla otomatik nesne tanıyan YOLO-World asistanı, kopya görsel temizliği ve takım görev yönetimiyle Roboflow, LabelImg, Label Studio ve CVAT için hızlı bir alternatiftir."
+            }
+          }
+        ]
+      }
+    ]
   }
   </script>
-  <link rel="icon" type="image/png" href="/logo.png">
-  <link rel="shortcut icon" type="image/png" href="/logo.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png">
+  <link rel="icon" type="image/png" sizes="256x256" href="/logo.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="shortcut icon" href="/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -855,13 +931,39 @@
               </div>
             </section>
 
+            <!-- SEO & FAQ SECTION (GENİŞ ARAMA SORGULARI İÇİN SEMANTİK REHBER) -->
+            <section class="landing-seo-faq" style="padding: 36px 20px 10px; max-width: 1080px; margin: 0 auto;">
+              <div style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 24px 28px;">
+                <h2 style="font-size: 1.2rem; font-weight: 700; color: #f8fafc; margin: 0 0 12px 0;">
+                  Yapay Zeka Görüntü Etiketleme, Fotoğraf Etiketleme ve YOLO Veri Seti Hazırlama Rehberi
+                </h2>
+                <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.65; margin: 0 0 16px 0;">
+                  <strong>AutoLabel Studio (YOLO Editör)</strong>; bilgisayarlı görü, derin öğrenme ve nesne tespiti projeleri için geliştirilmiş ücretsiz bir <strong>online görüntü etiketleme programı</strong> ve <strong>veri seti etiketleme platformudur</strong>. Kurulum gerektirmeden tarayıcı üzerinden <strong>YOLOv8 etiketleme</strong>, <strong>YOLOv11 veri seti hazırlama</strong>, <strong>YOLO-World otomatik nesne tespiti</strong>, <strong>Segment Anything (SAM) poligon maskeleme</strong>, <strong>bounding box çizme</strong>, <strong>COCO JSON</strong> ve <strong>Pascal VOC XML</strong> dışa aktarma işlemlerini tek merkezde sunar. Türkçe arayüzü, yapay zeka proje mimarı, kopya görsel temizliği ve rol bazlı ekip çalışmasıyla <strong>Roboflow</strong>, <strong>LabelImg</strong>, <strong>Label Studio</strong>, <strong>CVAT</strong> ve <strong>MakeSense.ai</strong> araçlarına hızlı ve modern bir alternatiftir.
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; font-size: 0.8rem; color: #cbd5e1;">
+                  <div style="background: rgba(2, 6, 23, 0.55); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px 14px;">
+                    <strong style="color: #38bdf8; display: block; margin-bottom: 4px;">Otomatik Fotoğraf &amp; Resim Etiketleme</strong>
+                    Sınıf isimlerini yazarak binlerce fotoğrafı YOLO-World sıfır-öğrenme yapay zeka motoruyla saniyeler içinde otomatik etiketleyin.
+                  </div>
+                  <div style="background: rgba(2, 6, 23, 0.55); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px 14px;">
+                    <strong style="color: #34d399; display: block; margin-bottom: 4px;">YOLOv8, YOLOv11 &amp; COCO Veri Seti Çıktısı</strong>
+                    Etiketlenen verileri Train, Validation ve Test oranlarıyla tek tıkla data.yaml dahil eğitime hazır ZIP paketi olarak indirin.
+                  </div>
+                  <div style="background: rgba(2, 6, 23, 0.55); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px 14px;">
+                    <strong style="color: #c084fc; display: block; margin-bottom: 4px;">Takım Tabanlı Etiketleme &amp; Kalite Kontrol</strong>
+                    Etiketleyici, denetçi ve takım kaptanı rolleriyle veri seti görevlerini paylaştırın, inceleme kuyruğunda onaylayıp ana veri setine birleştirin.
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <!-- FOOTER -->
             <footer class="landing-footer">
               <div class="landing-section-inner">
                 <div class="footer-inner">
                   <div class="footer-brand">
-                    <img src="/logo.png" alt="YOLO Editor" style="width:32px;border-radius:6px;">
-                    <span>YOLO Editor</span>
+                    <img src="/logo.png" alt="AutoLabel Studio - YOLO Editör" style="width:32px;border-radius:6px;">
+                    <span>AutoLabel Studio (YOLO Editör)</span>
                   </div>
                   <div class="footer-links">
                     <a href="javascript:void(0)" class="deck-quick-jump" data-target-page="1">Özellikler</a>
@@ -871,7 +973,7 @@
                     <a href="javascript:void(0)" id="footerPrivacyLink">Gizlilik Politikası</a>
                   </div>
                   <div class="footer-copy">
-                    © 2024 YOLO Editor · AI Dataset Labeling Platform · Tamamen Yerel
+                    © 2026 AutoLabel Studio (YOLO Editör) · Yapay Zeka Veri Seti &amp; Görüntü Etiketleme Platformu
                   </div>
                 </div>
               </div>
