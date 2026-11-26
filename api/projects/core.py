@@ -413,9 +413,11 @@ def create_project(req: CreateProjectRequest, authorization: Optional[str] = Hea
         d1_desc = config["projects"][folder_name]["description"]
         d1_type = config["projects"][folder_name]["project_type"]
         d1_lic = config["projects"][folder_name]["license"]
+        import json as _json
+        d1_cls_json = _json.dumps(config["classes"][folder_name], ensure_ascii=False)
         cf_d1_query(
-            "INSERT OR REPLACE INTO projects (id, display_name, description, project_type, visibility, license, created_at, owner_email, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [folder_name, d1_display, d1_desc, d1_type, visibility, d1_lic, created_at, owner_email, workspace_id]
+            "INSERT OR REPLACE INTO projects (id, display_name, description, project_type, visibility, license, created_at, owner_email, workspace_id, classes_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [folder_name, d1_display, d1_desc, d1_type, visibility, d1_lic, created_at, owner_email, workspace_id, d1_cls_json]
         )
 
         if workspace_id and workspace_id.startswith("ws_team_"):
@@ -721,6 +723,14 @@ def save_project_settings(req: ProjectSettingsSaveRequest, authorization: Option
         config["classes"]["bag"] = normalized
 
     save_project_config(config)
+    try:
+        import json as _json
+        cf_d1_query(
+            "UPDATE projects SET classes_json = ? WHERE id = ?",
+            [_json.dumps(normalized, ensure_ascii=False), req.category]
+        )
+    except Exception as e:
+        print(f"[D1 Update Classes Warning] {e}")
 
     remapped_count = 0
     if req.remap_labels and id_map:

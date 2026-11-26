@@ -2616,19 +2616,22 @@ renderLabelingStatsData(data) {
       card.className = 'review-item-card';
       card.style.cssText = 'background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.1); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; transition:transform 0.2s, border-color 0.2s;';
 
-      const imgSrc = `/api/preview-file?category=${encodeURIComponent(cat)}&filename=${encodeURIComponent(item.filename)}`;
+      const rqTok = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
+      const tokParam = rqTok ? `&token=${encodeURIComponent(rqTok)}` : '';
+      const imgSrc = `/api/preview-file?category=${encodeURIComponent(cat)}&filename=${encodeURIComponent(item.filename)}${tokParam}`;
+      const fallbackSrc = `/api/image-file?category=${encodeURIComponent(cat)}&filename=${encodeURIComponent(item.filename)}${tokParam}`;
 
       card.innerHTML = `
           <div style="position:relative; aspect-ratio:4/3; background:#000; overflow:hidden;">
-            <img src="${imgSrc}" loading="lazy" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='/api/image-file?category=${encodeURIComponent(cat)}&filename=${encodeURIComponent(item.filename)}'">
+            <img src="${imgSrc}" loading="lazy" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null;this.src='${fallbackSrc}'">
             <div style="position:absolute; top:8px; right:8px; background:rgba(15,23,42,0.85); color:#60a5fa; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:6px; backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.1);">
               ${item.box_count} Kutu
             </div>
           </div>
           <div style="padding:14px; display:flex; flex-direction:column; gap:10px; flex:1;">
             <div>
-              <strong style="color:#f8fafc; font-size:0.88rem; display:block; word-break:break-all;" title="${item.filename}">${item.filename}</strong>
-              <span style="font-size:0.75rem; color:#f59e0b;">${item.note || 'İnceleme bekliyor'}</span>
+              <strong style="color:#f8fafc; font-size:0.88rem; display:block; word-break:break-all;" title="${this._escapeHtml(item.filename)}">${this._escapeHtml(item.filename)}</strong>
+              <span style="font-size:0.75rem; color:#f59e0b;">${this._escapeHtml(item.note || 'İnceleme bekliyor')}</span>
             </div>
             <div style="margin-top:auto; display:flex; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
               <button class="rq-approve-btn btn-primary" style="flex:1; padding:7px 10px; font-size:0.8rem; font-weight:700; background:#10b981; justify-content:center;">

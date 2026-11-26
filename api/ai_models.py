@@ -186,15 +186,21 @@ def get_ai_model(model_key: Optional[str] = None, device: Optional[str] = None):
 
 
 def set_classes_if_changed(model, classes: List[str]):
-    """Only call set_classes when class list actually changed (avoids GPU overhead)."""
+    """Only call set_classes when class list actually changed (avoids GPU overhead and frees CLIP RAM on CPU)."""
     global _LAST_CLASSES
     with _MODEL_LOCK:
         if hasattr(model, "set_classes") and classes != _LAST_CLASSES:
             try:
                 model.set_classes(classes)
                 _LAST_CLASSES = list(classes)
-            except Exception:
-                pass
+                # CLIP metin kodlayıcısı (~600 MB RAM) yalnızca set_classes sırasında gerekir;
+                # tahmin aşamasında bellekte tutmayıp Railway OOM çökmesini önle
+                if "cuda" not in str(_ACTIVE_DEVICE) and hasattr(model, "model") and hasattr(model.model, "clip_model"):
+                    model.model.clip_model = None
+                    import gc
+                    gc.collect()
+            except Exception as e:
+                logger.warning(f"set_classes warning: {e}")
 
 
 

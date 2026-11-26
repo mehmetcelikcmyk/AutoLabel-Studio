@@ -346,7 +346,7 @@ def _run_batch_auto_label_thread(
             return (0, 255, 0)
 
         t_start = time.time()
-        BATCH_CHUNK_SIZE = 8 if "cuda" in _ACTIVE_DEVICE else 4
+        BATCH_CHUNK_SIZE = 8 if "cuda" in _ACTIVE_DEVICE else 1
         processed_count = 0
 
         for chunk_idx in range(0, len(img_files), BATCH_CHUNK_SIZE):
