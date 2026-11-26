@@ -1214,9 +1214,9 @@ drawSmartSegmentReticle(pt) {
   this.ctx.lineTo(pt.x + outerRadius + 8 / zoom, pt.y);
   // Dikey
   this.ctx.moveTo(pt.x, pt.y - outerRadius - 8 / zoom);
-  this.ctx.lineTo(pt.x - radius + 2 / zoom);
+  this.ctx.lineTo(pt.x, pt.y - radius + 2 / zoom);
   this.ctx.moveTo(pt.x, pt.y + radius - 2 / zoom);
-  this.ctx.lineTo(pt.x + outerRadius + 8 / zoom);
+  this.ctx.lineTo(pt.x, pt.y + outerRadius + 8 / zoom);
   this.ctx.stroke();
 
   // 6. Merkez Hedef Noktası
@@ -1226,7 +1226,7 @@ drawSmartSegmentReticle(pt) {
   this.ctx.fill();
 
   // 7. Akıllı Yardımcı Etiket (Tıkla & Bölütle)
-  const activeClsName = this.getClassName(this.currentClassId || 0) || 'Nesne';
+  const activeClsName = this.getClassName(this.activeClassId || 0) || 'Nesne';
   const hintText = `🪄 Tıkla: ${activeClsName} Bölütle`;
   const fSize = Math.max(11, Math.round(12 / zoom));
   this.ctx.font = `600 ${fSize}px "Plus Jakarta Sans", sans-serif`;
@@ -1765,6 +1765,7 @@ onMouseDown(e) {
 }
 
 onMouseMove(e) {
+  if (this.currentView && this.currentView !== 'editor') return;
   if (this.isPanning) {
     const dx = e.clientX - this.lastPanMouse.x;
     const dy = e.clientY - this.lastPanMouse.y;
@@ -1813,13 +1814,22 @@ onMouseMove(e) {
       const initial = this.initialBoxStates.get(idx);
       if (initial && this.boxes[idx]) {
         const b = this.boxes[idx];
-        b.x_center = Math.min(1.0 - b.width / 2, Math.max(b.width / 2, initial.x_center + dx));
-        b.y_center = Math.min(1.0 - b.height / 2, Math.max(b.height / 2, initial.y_center + dy));
+        const nextXc = Math.min(1.0 - b.width / 2, Math.max(b.width / 2, initial.x_center + dx));
+        const nextYc = Math.min(1.0 - b.height / 2, Math.max(b.height / 2, initial.y_center + dy));
+        const shiftX = nextXc - initial.x_center;
+        const shiftY = nextYc - initial.y_center;
+        b.x_center = nextXc;
+        b.y_center = nextYc;
+        if (b.type === 'polygon' && Array.isArray(initial.points)) {
+          b.points = initial.points.map(p => ({
+            x: Math.min(1.0, Math.max(0.0, p.x + shiftX)),
+            y: Math.min(1.0, Math.max(0.0, p.y + shiftY))
+          }));
+        }
       }
     });
     this.setDirty(true);
     this.render();
-    this.updateBoxesList();
   } else if (this.dragAction === 'resize') {
     if (moveDist > 2) this.hasActuallyDragged = true;
     const singleIdx = Array.from(this.selectedBoxIndices)[0];
@@ -1827,7 +1837,6 @@ onMouseMove(e) {
       this.handleResize(pt, this.boxes[singleIdx], this.initialBoxState, this.resizeHandle);
       this.setDirty(true);
       this.render();
-      this.updateBoxesList();
     }
   }
 }
@@ -1901,6 +1910,17 @@ handleResize(pt, box, initial, handle) {
   box.height = Math.max(0.005, Math.min(1.0, h));
   box.x_center = ((x1 + x2) / 2) / cW;
   box.y_center = ((y1 + y2) / 2) / cH;
+
+  if (box.type === 'polygon' && Array.isArray(initial.points) && initial.width > 0 && initial.height > 0) {
+    const oldX1 = initial.x_center - initial.width / 2;
+    const oldY1 = initial.y_center - initial.height / 2;
+    const newX1 = box.x_center - box.width / 2;
+    const newY1 = box.y_center - box.height / 2;
+    box.points = initial.points.map(p => ({
+      x: Math.min(1.0, Math.max(0.0, newX1 + ((p.x - oldX1) / initial.width) * box.width)),
+      y: Math.min(1.0, Math.max(0.0, newY1 + ((p.y - oldY1) / initial.height) * box.height))
+    }));
+  }
 }
 
 findHitBoxIndex(pt) {
@@ -1934,7 +1954,8 @@ findHitHandle(pt, box) {
   const boxY = (box.y_center * cH) - (boxH / 2);
 
   const points = this.getHandlePoints(boxX, boxY, boxW, boxH);
-  const hitRadius = this.HANDLE_SIZE + 4;
+  const effectiveZoom = Math.max(0.25, (this.zoom || 1) * (this._baseScale || 1));
+  const hitRadius = (this.HANDLE_SIZE + 6) / effectiveZoom;
 
   for (const [key, p] of Object.entries(points)) {
     if (Math.abs(pt.x - p.x) <= hitRadius && Math.abs(pt.y - p.y) <= hitRadius) {

@@ -1033,7 +1033,7 @@ renderStats(stats, classes) {
   try {
     const res = await fetch('/api/delete-image', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         category: this.currentCategory,
         filename: filename
@@ -1223,7 +1223,7 @@ renderLoupe(pt) {
         image_filename: fname,
         click_x: clickX,
         click_y: clickY,
-        class_id: (this.currentClassId !== undefined && this.currentClassId !== null) ? this.currentClassId : 0
+        class_id: (this.activeClassId !== undefined && this.activeClassId !== null) ? this.activeClassId : 0
       })
     });
     const data = await res.json();

@@ -199,7 +199,7 @@ def api_hardware_recommendation(category: Optional[str] = Query(None)):
     }
 
 
-def _run_finetune_thread(category: str, req_dict: Dict[str, Any]):
+def _run_finetune_thread(category: str, req_dict: Dict[str, Any], authorization: Optional[str] = None):
     with _FINETUNE_LOCK:
         FINETUNE_JOBS[category] = {
             "status": "running", "epoch": 0,
@@ -209,7 +209,7 @@ def _run_finetune_thread(category: str, req_dict: Dict[str, Any]):
 
     try:
         export_req = ExportZipRequest(category=category, train_ratio=req_dict["train_ratio"])
-        export_dataset_zip(export_req)
+        export_dataset_zip(export_req, authorization=authorization)
 
         export_dir = ROOT_DIR / "exports" / f"{category}_yolo_export"
         yaml_path = export_dir / "data.yaml"
@@ -292,7 +292,7 @@ def start_fine_tune(req: FineTuneRequest, background_tasks: BackgroundTasks, aut
         raise HTTPException(status_code=400, detail="Epoch sayısı 5–300 arasında olmalıdır.")
 
     req_dict = req.dict()
-    background_tasks.add_task(_run_finetune_thread, req.category, req_dict)
+    background_tasks.add_task(_run_finetune_thread, req.category, req_dict, authorization)
     return {"status": "ok", "message": f"'{req.category}' projesi için fine-tuning başlatıldı.", "category": req.category}
 
 

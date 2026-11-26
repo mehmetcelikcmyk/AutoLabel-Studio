@@ -10,10 +10,11 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any, Tuple
 
 import numpy as np
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Header
 from pydantic import BaseModel
 
 from core.config import ROOT_DIR
+from core.security import require_admin
 
 logger = logging.getLogger("AutoLabel")
 
@@ -277,9 +278,11 @@ def list_all_models():
 async def upload_custom_model(
     file: UploadFile = File(...),
     model_name: str = Form(...),
-    description: str = Form("")
+    description: str = Form(""),
+    authorization: Optional[str] = Header(None)
 ):
     """Kullanıcının kendi YOLO/PyTorch (.pt / .onnx) modelini yükler ve sınıflarını çıkarır."""
+    require_admin(authorization)
     fname = file.filename or "custom_model.pt"
     ext = os.path.splitext(fname)[1].lower()
     if ext not in [".pt", ".onnx"]:
@@ -335,8 +338,9 @@ async def upload_custom_model(
 
 
 @router.delete("/api/models/{model_key}")
-def delete_custom_model(model_key: str):
+def delete_custom_model(model_key: str, authorization: Optional[str] = Header(None)):
     """Özel modeli sistemden ve diskten siler."""
+    require_admin(authorization)
     custom_models = load_custom_models()
     if model_key not in custom_models:
         raise HTTPException(status_code=404, detail="Model bulunamadı.")

@@ -141,6 +141,9 @@ onKeyDown(e) {
   } else if (e.key === 'f' || e.key === 'F') {
     e.preventDefault();
     this.toggleZenMode();
+  } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) && this.selectedBoxIndices.size > 0 && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    this.nudgeSelectedBoxes(e.key, e.shiftKey, e.altKey);
   } else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -218,7 +221,8 @@ onKeyDown(e) {
     const numMatch = e.key.match(/^(\d)$/);
     if (numMatch && !e.ctrlKey && !e.altKey && !e.metaKey) {
       const classIdx = parseInt(numMatch[1]) - 1;
-      if (classIdx >= 0 && classIdx < Object.keys(this.classes).length) {
+      const projClasses = typeof this.getProjectClasses === 'function' ? this.getProjectClasses() : [];
+      if (classIdx >= 0 && classIdx < projClasses.length) {
         e.preventDefault();
         const classId = parseInt(this.activeClassSelect.options[classIdx]?.value ?? classIdx);
         this.activeClassId = classId;
@@ -597,7 +601,7 @@ updateBoxesList() {
 
   if (bulkClassSelect && selCount > 0) {
     bulkClassSelect.innerHTML = `<option value="">Sınıf Seçiniz (${selCount} kutu)...</option>` +
-      Object.values(this.classes).map(c => `<option value="${c.id}">${c.id}: ${c.name}</option>`).join('');
+      (typeof this.getProjectClasses === 'function' ? this.getProjectClasses() : []).map(c => `<option value="${c.id}">${c.id}: ${this._escapeHtml(c.name)}</option>`).join('');
   }
 
   if (this.boxes.length === 0) {

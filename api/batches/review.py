@@ -218,9 +218,7 @@ def reset_batch_approval(data: dict, authorization: Optional[str] = Header(None)
 
 @router.post("/api/projects/mark-review")
 def mark_for_review(req: MarkReviewRequest, authorization: Optional[str] = Header(None)):
-    user = get_current_user(authorization)
-    if not user:
-        raise HTTPException(status_code=401, detail="Giriş gerekli.")
+    user = check_project_permission(req.category, authorization, require_edit=True)
 
     reviews = _load_reviews(req.category)
     if req.status == "clear":

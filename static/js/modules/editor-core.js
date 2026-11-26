@@ -2275,11 +2275,6 @@ setupEventListeners() {
     }
   });
 
-  // Havuza İade Et (Sıfırla) Butonunu Bağla
-  document.getElementById('resetToUnlabeledBtn')?.addEventListener('click', () => {
-    this.resetCurrentImageToUnlabeled();
-  });
-
   document.getElementById('saveProjectSettingsBtn')?.addEventListener('click', () => this.saveProjectSettings());
   document.getElementById('addNewClassRowBtn')?.addEventListener('click', () => this.addNewClassRow());
 

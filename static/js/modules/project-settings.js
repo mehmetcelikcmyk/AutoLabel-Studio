@@ -24,7 +24,9 @@
   this.showLoading(true, 'Proje ayarları yükleniyor...');
 
   try {
-    const res = await fetch(`/api/project-settings?category=${category}`);
+    const res = await fetch(`/api/project-settings?category=${encodeURIComponent(category)}`, {
+      headers: this.getAuthHeaders()
+    });
     const data = await res.json();
     this.showLoading(false);
 
@@ -208,7 +210,7 @@ renderClassDistributionChart(distribution, classesList, totalBoxes) {
   try {
     const res = await fetch('/api/project-settings/save', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         category: this.activeSettingsCategory,
         display_name: dispName || this.activeSettingsCategory,

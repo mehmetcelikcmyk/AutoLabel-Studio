@@ -306,7 +306,7 @@
           const userToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
           if (!userToken) {
             this.showToast('Projeyi klonlamak için lütfen önce giriş yapınız.', 'error');
-            this.showAuthModal('login');
+            this.showAuth('login');
             return;
           }
 
@@ -1407,7 +1407,7 @@ appendChatMessage(role, content, isHtml = false) {
         display_name: bp.name,
         description: bp.description,
         classes: bp.classes,
-        visibility: 'public',
+        visibility: 'private',
         license: 'CC BY 4.0',
         project_type: bp.type || 'detection',
         workspace_id: this.activeWorkspaceId || localStorage.getItem('activeWorkspaceId') || null

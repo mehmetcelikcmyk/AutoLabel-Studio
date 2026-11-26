@@ -137,7 +137,8 @@
 
     // Filtreleme ve arama fonksiyonu
     const passesFilter = (b) => {
-      if (kSearch && !(b.name || '').toLowerCase().includes(kSearch) && !(b.tags || '').toLowerCase().includes(kSearch)) {
+      const tagStr = Array.isArray(b.tags) ? b.tags.join(' ') : (b.tags || '');
+      if (kSearch && !(b.name || '').toLowerCase().includes(kSearch) && !tagStr.toLowerCase().includes(kSearch)) {
         return false;
       }
       if (kFilter === 'mine') {
@@ -632,7 +633,8 @@
   });
 
   // 1. Rename
-  menu.querySelector('#menuRename').onclick = async () => {
+  const renameMenuItem = menu.querySelector('#menuRename');
+  if (renameMenuItem) renameMenuItem.onclick = async () => {
     closeMenu();
     const newName = await this.showPrompt({
       title: 'Yığını Yeniden Adlandır',
@@ -643,33 +645,45 @@
       confirmText: 'Yeniden Adlandır'
     });
     if (newName && newName.trim() && newName.trim() !== batch.name) {
-      await fetch('/api/projects/rename-batch', {
+      const res = await fetch('/api/projects/rename-batch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ category: currentProj, batch_id: batch.id, new_name: newName.trim() })
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        this.showToast(err.detail || 'Yığın adı güncellenemedi.', 'error');
+        return;
+      }
       this.showToast(`Yığın adı güncellendi: "${newName.trim()}"`, 'success');
       this.renderAnnotateKanban();
     }
   };
 
   // 2. Tag
-  menu.querySelector('#menuTag').onclick = async () => {
+  const tagMenuItem = menu.querySelector('#menuTag');
+  if (tagMenuItem) tagMenuItem.onclick = async () => {
     closeMenu();
+    const curTags = Array.isArray(batch.tags) ? batch.tags.join(', ') : (batch.tags || '');
     const tags = await this.showPrompt({
       title: 'Yığın Etiketi / Notu',
       subtitle: 'Etiketleme',
       message: 'Yığın için açıklayıcı etiket/not giriniz:',
-      defaultValue: batch.tags || '',
+      defaultValue: curTags,
       placeholder: 'Örn: batch_v1, acil...',
       confirmText: 'Etiketi Kaydet'
     });
     if (tags !== null) {
-      await fetch('/api/projects/update-batch-tags', {
+      const res = await fetch('/api/projects/update-batch-tags', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ category: currentProj, batch_id: batch.id, tags: tags.trim() })
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        this.showToast(err.detail || 'Yığın etiketi güncellenemedi.', 'error');
+        return;
+      }
       this.showToast('Yığın etiketi güncellendi.', 'success');
       this.renderAnnotateKanban();
     }
@@ -709,7 +723,8 @@
   };
 
   // 4. Delete
-  menu.querySelector('#menuDelete').onclick = async () => {
+  const deleteMenuItem = menu.querySelector('#menuDelete');
+  if (deleteMenuItem) deleteMenuItem.onclick = async () => {
     closeMenu();
     const confirmed = await this.showConfirm({
       title: 'Yığını Sil',
@@ -1703,7 +1718,9 @@ updateDatasetSelectionBar() {
   async renderHubSettings() {
   if (!this.activeHubProjectId) return;
   try {
-    const res = await fetch(`/api/project-settings?category=${encodeURIComponent(this.activeHubProjectId)}`);
+    const res = await fetch(`/api/project-settings?category=${encodeURIComponent(this.activeHubProjectId)}`, {
+      headers: this.getAuthHeaders()
+    });
     if (res.ok) {
       this.currentHubMeta = await res.json();
     }
@@ -2258,7 +2275,11 @@ setupExportStudio() {
         }
 
         if (res.ok && (data.r2_download_url || data.download_url || data.zip_url || data.zip_file)) {
-          const downloadUrl = data.r2_download_url || data.download_url || data.zip_url || `/api/download-export?file=${encodeURIComponent(data.zip_file)}`;
+          let downloadUrl = data.r2_download_url || data.download_url || data.zip_url || `/api/download-zip?filename=${encodeURIComponent(data.zip_file)}`;
+          if (downloadUrl.startsWith('/api/download-zip') && !downloadUrl.includes('token=')) {
+            const dlTok = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
+            if (dlTok) downloadUrl += (downloadUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(dlTok)}`;
+          }
           const resContainer = document.getElementById('exportFmtResult');
           const msgSpan = document.getElementById('exportFmtResultMsg');
           const dlLink = document.getElementById('exportFmtDownloadLink');

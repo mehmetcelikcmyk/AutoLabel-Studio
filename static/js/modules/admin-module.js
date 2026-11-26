@@ -289,6 +289,63 @@ setupAdminEventsOnce() {
     }
   });
 
+  // Admin Şablon Modal Kapat / Sınıf Ekle / Kaydet Bağlantıları
+  const closeCustomTplModal = () => {
+    const m = document.getElementById('createCustomTemplateModal');
+    if (m) m.style.display = 'none';
+  };
+  document.getElementById('closeCreateTemplateModalBtn')?.addEventListener('click', closeCustomTplModal);
+  document.getElementById('cancelCreateTplBtn')?.addEventListener('click', closeCustomTplModal);
+  document.getElementById('tplAddClassRowBtn')?.addEventListener('click', () => {
+    const tplContainer = document.getElementById('tplClassesRowsContainer');
+    if (!tplContainer) return;
+    const div = document.createElement('div');
+    div.className = 'tpl-class-row';
+    div.style.cssText = 'display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06);';
+    div.innerHTML = `
+      <input type="color" class="tpl-cls-color" value="#3b82f6" style="width:32px; height:32px; border:none; border-radius:6px; cursor:pointer; background:transparent;">
+      <input type="text" class="tpl-cls-name form-input" placeholder="Sınıf Adı" value="" style="flex:1; padding:6px 10px; background:#0b0f19; border:1px solid rgba(255,255,255,0.14); border-radius:6px; color:#fff; font-size:0.82rem;">
+      <input type="text" class="tpl-cls-prompt form-input" placeholder="AI Arama Promptu" value="" style="flex:1.5; padding:6px 10px; background:#0b0f19; border:1px solid rgba(255,255,255,0.14); border-radius:6px; color:#fff; font-size:0.82rem;">
+      <button type="button" class="tpl-del-row-btn" style="background:transparent; border:none; color:#ef4444; cursor:pointer; font-size:1.1rem; padding:4px;">✕</button>
+    `;
+    div.querySelector('.tpl-del-row-btn')?.addEventListener('click', () => div.remove());
+    tplContainer.appendChild(div);
+  });
+  document.getElementById('submitCreateTplBtn')?.addEventListener('click', async () => {
+    const title = (document.getElementById('tplTitleInput')?.value || '').trim();
+    const category = document.getElementById('tplCategorySelect')?.value || 'industry';
+    const model = document.getElementById('tplModelSelect')?.value || 'yolov8s-worldv2';
+    const description = (document.getElementById('tplDescInput')?.value || '').trim();
+    const rows = Array.from(document.querySelectorAll('#tplClassesRowsContainer .tpl-class-row'));
+    const classes = rows.map((r, idx) => ({
+      id: idx,
+      name: (r.querySelector('.tpl-cls-name')?.value || '').trim(),
+      color: r.querySelector('.tpl-cls-color')?.value || '#3b82f6',
+      prompts: [(r.querySelector('.tpl-cls-prompt')?.value || '').trim()].filter(Boolean)
+    })).filter(c => c.name);
+    if (!title || classes.length === 0) {
+      this.showToast('Şablon adı ve en az bir sınıf gereklidir.', 'warning');
+      return;
+    }
+    try {
+      const res = await fetch('/api/templates/custom', {
+        method: 'POST',
+        headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ title, category, model, description, classes })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.status === 'ok') {
+        this.showToast('Özel şablon başarıyla oluşturuldu.', 'success');
+        closeCustomTplModal();
+        if (typeof this.loadAdminTemplates === 'function') this.loadAdminTemplates();
+      } else {
+        this.showToast(data.detail || 'Şablon oluşturulamadı.', 'error');
+      }
+    } catch (_) {
+      this.showToast('Şablon kaydedilirken bağlantı hatası oluştu.', 'error');
+    }
+  });
+
   // Admin Yeni Kullanıcı Ekleme Butonu & Modalı
   const userModal = document.getElementById('adminCreateUserModal');
   const openUserModal = () => {

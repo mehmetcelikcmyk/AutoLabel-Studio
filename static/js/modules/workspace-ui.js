@@ -2603,21 +2603,22 @@ hideAllViews() {
         return;
       }
       const s = document.createElement('script');
-      s.src = src;
+      s.src = src.startsWith('/') ? src : '/' + src;
       s.onload  = () => { this._loadedModules.add(src); resolve(); };
       s.onerror = () => reject(new Error('Module load failed: ' + src));
       document.head.appendChild(s);
     });
     const _moduleMap = {
-      agent:    'js/modules/explore-agent.js',
-      explore:  'js/modules/explore-agent.js',
-      admin:    'js/modules/admin-module.js',
-      team:     'js/modules/teams.js',
-      train:    'js/modules/project-hub.js',
-      models:   'js/modules/project-hub.js',
-      hub:      'js/modules/project-hub.js',
-      projects: 'js/modules/project-hub.js',
+      agent:    '/js/modules/explore-agent.js',
+      explore:  '/js/modules/explore-agent.js',
+      admin:    '/js/modules/admin-module.js',
+      team:     '/js/modules/teams.js',
+      train:    '/js/modules/project-hub.js',
+      models:   '/js/modules/project-hub.js',
+      hub:      '/js/modules/project-hub.js',
+      projects: '/js/modules/project-hub.js',
     };
+    this._lazyLoadModule = _lazyLoad;
     const _needed = _moduleMap[tabName];
     if (_needed && !this._loadedModules.has(_needed)) {
       try {

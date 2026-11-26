@@ -30,9 +30,12 @@ COPY . .
 # Ensure storage directories exist
 RUN mkdir -p exports static
 
-# Never run the web process as root.  User uploads are stored in private R2,
-# therefore the runtime filesystem can remain read-only.
-RUN useradd --system --uid 10001 appuser && chown -R appuser:appuser /app
+# Never run the web process as root. Give appuser a writable home and temp Ultralytics config dir.
+ENV HOME=/home/appuser \
+    YOLO_CONFIG_DIR=/tmp/Ultralytics
+RUN useradd --system --create-home --uid 10001 appuser && \
+    mkdir -p /home/appuser/.cache /tmp/Ultralytics && \
+    chown -R appuser:appuser /app /home/appuser /tmp/Ultralytics
 USER appuser
 
 # Expose port (Railway injects PORT dynamically; default 8000)

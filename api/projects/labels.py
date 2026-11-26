@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException, Query, Header
 from core.config import ROOT_DIR
 from core.database import (
     cf_r2_upload,
+    cf_r2_get_object,
     cf_r2_delete_object,
     cf_d1_save_batches,
 )
@@ -44,6 +45,19 @@ def load_label(
     cls_names = {c.get("id", i): c.get("name", f"Class_{i}") for i, c in enumerate(classes_map)}
 
     items = []
+    if not txt_path.exists():
+        # Railway gibi geçici diskli ortamlarda etiketi Cloudflare R2 yedeğinden çek
+        try:
+            storage = get_project_storage_info(category)
+            if storage.get("r2_configured"):
+                r2_key = f"{storage['r2_labels_prefix']}/{stem}.txt"
+                raw_bytes = cf_r2_get_object(r2_key)
+                if raw_bytes is not None:
+                    txt_path.parent.mkdir(parents=True, exist_ok=True)
+                    txt_path.write_bytes(raw_bytes)
+        except Exception as r2_err:
+            print(f"[R2 Load Label Fallback Warning] {r2_err}")
+
     if txt_path.exists():
         try:
             with open(txt_path, "r", encoding="utf-8") as f:

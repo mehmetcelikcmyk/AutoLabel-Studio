@@ -1161,6 +1161,9 @@
             }
 
             this.showToast(`Kaydınız tamamlandı! Hoş geldiniz, ${data.user.display_name}!`, 'success');
+            if (typeof this.loadUserWorkspaces === 'function') {
+              await this.loadUserWorkspaces().catch(() => {});
+            }
             await this.showAppShell('agent');
             return;
           }

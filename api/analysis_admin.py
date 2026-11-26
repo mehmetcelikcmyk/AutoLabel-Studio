@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from core.config import ROOT_DIR, load_settings, SETTINGS_FILE
 from core.database import cf_d1_query, cf_r2_list_objects, cf_r2_get_object
-from core.security import get_current_user, require_admin
+from core.security import get_current_user, require_admin, check_project_permission
 from api.ai_models import MODEL_REGISTRY, _MODEL_CACHE, _ACTIVE_DEVICE, get_ai_model
 from api.projects import get_categories, load_project_config
 from api.shared.utils import get_project_storage_info
@@ -973,7 +973,8 @@ def _hamming_distance(h1: int, h2: int) -> int:
 
 
 @router.get("/api/projects/scan-duplicates")
-def api_scan_duplicates(category: str = Query(...), filenames: Optional[str] = Query(None)):
+def api_scan_duplicates(category: str = Query(...), filenames: Optional[str] = Query(None), authorization: Optional[str] = Header(None)):
+    check_project_permission(category, authorization, require_edit=False)
     cat_dir = ROOT_DIR / category
     cat_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1107,7 +1108,8 @@ def api_scan_duplicates(category: str = Query(...), filenames: Optional[str] = Q
 
 
 @router.get("/api/projects/quality-stats")
-def project_quality_stats(category: str = Query(...)):
+def project_quality_stats(category: str = Query(...), authorization: Optional[str] = Header(None)):
+    check_project_permission(category, authorization, require_edit=False)
     cat_dir = ROOT_DIR / category
     labels_dir = ROOT_DIR / f"{category}_labeled" / "labels"
     if not cat_dir.exists():
@@ -1464,12 +1466,14 @@ class AugmentedExportRequest(BaseModel):
     category: str
     train_ratio: float = 0.80
     test_ratio: float = 0.0
-    augmentations: List[str] = ["flip_h", "brightness", "rotate"]
+    augmentations: Optional[List[str]] = None
+    aug_types: Optional[List[str]] = None
     copies: int = 2
 
 
 @router.post("/api/projects/export-augmented")
-def export_augmented_dataset(req: AugmentedExportRequest):
+def export_augmented_dataset(req: AugmentedExportRequest, authorization: Optional[str] = Header(None)):
+    check_project_permission(req.category, authorization, require_edit=False)
     cat = req.category
     cat_dir = ROOT_DIR / cat
     labels_dir = ROOT_DIR / f"{cat}_labeled" / "labels"
@@ -1505,7 +1509,7 @@ def export_augmented_dataset(req: AugmentedExportRequest):
         (export_dir / "images" / split).mkdir(parents=True, exist_ok=True)
         (export_dir / "labels" / split).mkdir(parents=True, exist_ok=True)
 
-    aug_list = req.augmentations or ["flip_h", "brightness"]
+    aug_list = req.aug_types or req.augmentations or ["flip_h", "brightness", "rotate"]
     copies = max(1, min(req.copies, 5))
     generated = 0
 
@@ -1540,6 +1544,10 @@ def export_augmented_dataset(req: AugmentedExportRequest):
                 elif aug == "brightness":
                     arr = rgb.astype(np.float32) * random.uniform(0.7, 1.3)
                     new_rgb = np.clip(arr, 0, 255).astype(np.uint8)
+                elif aug == "rotate":
+                    # 180 derece döndürme ile kutu geometrisini bozmadan artır
+                    new_rgb = np.rot90(rgb, 2)
+                    new_boxes = [[b[0], 1.0 - b[1], 1.0 - b[2], b[3], b[4]] for b in raw_boxes]
 
                 new_stem = f"{img_path.stem}_aug{i}"
                 new_img_path = export_dir / "images" / split_name / f"{new_stem}.jpg"

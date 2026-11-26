@@ -200,7 +200,9 @@ def confirm_r2_upload(
     batch_name_val = req.batch_name.strip() if req.batch_name else None
     tags_list = [t.strip() for t in req.batch_tags.split(",") if t.strip()] if req.batch_tags else []
 
-    batches_file = cat_dir / "batches.json"
+    labeled_dir = ROOT_DIR / f"{clean_category}_labeled"
+    labeled_dir.mkdir(parents=True, exist_ok=True)
+    batches_file = labeled_dir / "batches.json"
     existing_batches = []
     if batches_file.exists():
         try:
@@ -213,7 +215,7 @@ def confirm_r2_upload(
         "name": batch_name_val or f"R2 Batch - {datetime.now().strftime('%d.%m.%Y %H:%M')}",
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "uploaded_by": current_user.get("email") if current_user else "anonymous",
-        "tags": tags_list,
+        "tags": ", ".join(tags_list),
         "image_count": len(saved_img_names),
         "label_count": 0,
         "images": saved_img_names,
