@@ -441,11 +441,16 @@ def auth_google(request: Request):
             "message": "Google OAuth henüz yapılandırılmamış. Ayarlar > Google OAuth bölümünden Client ID girin."
         })
 
-    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
-    host = request.headers.get("x-forwarded-host", request.headers.get("host", f"localhost:{request.url.port or 8000}"))
-    if "127.0.0.1" in host:
-        host = host.replace("127.0.0.1", "localhost")
-    redirect_uri = f"{proto}://{host}/api/auth/google/callback"
+    import os
+    explicit_redirect = os.getenv("GOOGLE_REDIRECT_URI", "").strip()
+    if explicit_redirect:
+        redirect_uri = explicit_redirect
+    else:
+        proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+        host = request.headers.get("x-public-host") or request.headers.get("x-forwarded-host") or request.headers.get("host", f"localhost:{request.url.port or 8000}")
+        if "127.0.0.1" in host:
+            host = host.replace("127.0.0.1", "localhost")
+        redirect_uri = f"{proto}://{host}/api/auth/google/callback"
 
     params = urllib.parse.urlencode({
         "client_id": client_id,
@@ -468,11 +473,16 @@ def auth_google_callback(request: Request, code: Optional[str] = None, error: Op
     client_id = settings.get("google_client_id", "")
     client_secret = settings.get("google_client_secret", "")
 
-    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
-    host = request.headers.get("x-forwarded-host", request.headers.get("host", f"localhost:{request.url.port or 8000}"))
-    if "127.0.0.1" in host:
-        host = host.replace("127.0.0.1", "localhost")
-    redirect_uri = f"{proto}://{host}/api/auth/google/callback"
+    import os
+    explicit_redirect = os.getenv("GOOGLE_REDIRECT_URI", "").strip()
+    if explicit_redirect:
+        redirect_uri = explicit_redirect
+    else:
+        proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+        host = request.headers.get("x-public-host") or request.headers.get("x-forwarded-host") or request.headers.get("host", f"localhost:{request.url.port or 8000}")
+        if "127.0.0.1" in host:
+            host = host.replace("127.0.0.1", "localhost")
+        redirect_uri = f"{proto}://{host}/api/auth/google/callback"
 
     try:
         token_data = urllib.parse.urlencode({

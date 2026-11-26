@@ -13,6 +13,7 @@ export async function onRequest(context) {
   const targetUrl = new URL(incomingUrl.pathname + incomingUrl.search, backendOrigin);
 
   const headers = new Headers(request.headers);
+  headers.set("X-Public-Host", incomingUrl.host);
   headers.set("X-Forwarded-Host", incomingUrl.host);
   headers.set("X-Forwarded-Proto", incomingUrl.protocol.replace(":", ""));
   headers.delete("host");
