@@ -333,6 +333,9 @@ def check_project_permission(
         auth_header = f"Bearer {query_token}"
 
     user = get_current_user(auth_header)
+    if not user:
+        raise HTTPException(status_code=401, detail="Oturum açmanız gerekmektedir.")
+
     clean_cat = category.strip()
 
     user_email = user.get("email", "").strip().lower() if user else None

@@ -252,9 +252,12 @@
       } else {
         gallery.innerHTML = p.samples.map(s => {
           const hasBoxes = s.boxes && s.boxes.length > 0;
+          const previewSrc = (token && s.preview_url && !s.preview_url.includes('token='))
+            ? `${s.preview_url}${s.preview_url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`
+            : s.preview_url;
           return `
               <div style="position:relative; background:#020617; border:1px solid rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; aspect-ratio:4/3; display:flex; align-items:center; justify-content:center;">
-                <img src="${s.preview_url}" alt="${s.filename}" style="width:100%; height:100%; object-fit:cover;" loading="lazy">
+                <img src="${previewSrc}" alt="${s.filename}" style="width:100%; height:100%; object-fit:cover;" loading="lazy">
                 <div style="position:absolute; bottom:6px; left:6px; right:6px; background:rgba(15,23,42,0.85); backdrop-filter:blur(4px); padding:4px 8px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; color:#cbd5e1;">
                   <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:90px;" title="${this._escapeHtml(s.filename)}">${this._escapeHtml(s.filename)}</span>
                   <span style="color:${hasBoxes ? '#34d399' : '#94a3b8'}; font-weight:700;">${hasBoxes ? `${s.boxes.length} Kutu` : 'Ham'}</span>
@@ -1506,6 +1509,12 @@ appendChatMessage(role, content, isHtml = false) {
 }
 
 showCreateProject(pushHistory = true) {
+  const token = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+  if (!token || !this.currentUser) {
+    if (typeof this.showLoading === 'function') this.showLoading(false);
+    this.showAuth('login', true);
+    return;
+  }
   this.currentView = 'create_project';
   if (pushHistory) {
     try {
@@ -1580,7 +1589,12 @@ switchHubTab(tabName) {
 
     const bust = `&_t=${Date.now()}`;
     const res = await fetch(`/api/project-settings?category=${encodeURIComponent(this.activeHubProjectId)}${tokenQuery}${bust}`, { headers, cache: 'no-store' });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      this.showToast(data.detail || 'Bu projeye erişim yetkiniz bulunmuyor veya proje mevcut değil.', 'error');
+      this.closeProjectToWorkspace(true);
+      return;
+    }
     this.currentHubMeta = data;
     // Projedeki rol ve yönetim yetkisi (backend'den gelir)
     this.currentProjectCanManage = data.can_manage === true;

@@ -2223,6 +2223,12 @@ class DatasetEditor {
   }
 
   async openProject(projectId, defaultTab = 'upload', pushHistory = true) {
+    const token = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    if (!token || !this.currentUser) {
+      if (typeof this.showLoading === 'function') this.showLoading(false);
+      this.showAuth('login', true);
+      return;
+    }
     if (!document.querySelector('script[src*="project-hub.js"]') && typeof this._lazyLoadModule === 'function') {
       try {
         await this._lazyLoadModule('/js/modules/project-hub.js');
@@ -2234,6 +2240,17 @@ class DatasetEditor {
     if (projectId === 'bag' && !this.projects.some(p => p.id === 'bag')) {
       const match = this.projects.find(p => p.id === 'bag_detection_project' || p.id.includes('bag'));
       if (match) projectId = match.id;
+    }
+    const isAdmin = !!(this.currentUser?.is_admin || this.currentUser?.role === 'admin');
+    if (Array.isArray(this.projects) && this.projects.length > 0 && !isAdmin) {
+      const found = this.projects.find(p => p.id === projectId || p.id.toLowerCase() === String(projectId).toLowerCase());
+      if (!found) {
+        if (typeof this.showLoading === 'function') this.showLoading(false);
+        this.showToast('Bu projeye erişim yetkiniz bulunmuyor veya proje mevcut değil.', 'error');
+        await this.showAppShell('projects', true);
+        return;
+      }
+      projectId = found.id;
     }
 
     this.isProjectContext = true;

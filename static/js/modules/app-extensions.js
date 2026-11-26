@@ -1312,8 +1312,8 @@
     const isGoogleAuth = window.location.hash.includes('google_token=') || window.location.search.includes('auth=google');
     const isExplicitWorkspace = window.location.search.includes('tab=') || window.location.search.includes('project=') || window.location.search.includes('editor=');
 
-    // If already authenticated or in OAuth callback or workspace view, do not display or reset landing deck
-    if (hasToken || isGoogleAuth || isExplicitWorkspace) {
+    // If already authenticated or in OAuth callback, do not display or reset landing deck
+    if (hasToken || isGoogleAuth) {
       const lv = document.getElementById('landingView');
       if (lv) {
         lv.style.display = 'none';

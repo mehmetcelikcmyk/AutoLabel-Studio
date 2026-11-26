@@ -41,10 +41,21 @@
       }
 
       let isTokenValid = false;
+      let shouldClearToken = false;
       try {
-        const res = await fetch('/api/auth/me', {
+        let res = await fetch('/api/auth/me', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
+        // Sunucu yeniden baslatiliyorsa (502/503/504) oturumu silmeden once kisa bir gecikmeyle tekrar dene
+        if (!res.ok && (res.status === 502 || res.status === 503 || res.status === 504)) {
+          await new Promise(r => setTimeout(r, 1500));
+          res = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+        }
+        if (res.status === 401 || res.status === 403) {
+          shouldClearToken = true;
+        }
         if (res.ok) {
           const data = await res.json();
           this.currentUser = data.user;
@@ -144,19 +155,41 @@
           const pathTab = knownTabs.includes(cleanPath) ? cleanPath : null;
           const editorProject = urlParams.get('editor');
           const project = urlParams.get('project');
-          const pTab = urlParams.get('tab') || pathTab;
+          let pTab = urlParams.get('tab') || pathTab;
           const create = urlParams.get('create');
+
+          // Yetkisiz admin sekmesi erisimini engelle
+          if (pTab === 'admin' && !isAdmin) {
+            this.showToast('Yönetici paneline erişim yetkiniz bulunmuyor.', 'warning');
+            pTab = 'projects';
+          }
 
           try {
             if (editorProject) {
-              await this.showEditor(editorProject, true);
+              const canOpenEditor = isAdmin || (this.projects || []).some(p => p.id === editorProject || p.id.toLowerCase() === editorProject.toLowerCase());
+              if (!canOpenEditor) {
+                this.showToast('Bu projeye erişim yetkiniz bulunmuyor veya proje mevcut değil.', 'error');
+                await this.showAppShell('projects', true);
+              } else {
+                await this.showEditor(editorProject, true);
+              }
             } else if (project) {
-              await this.openProject(project, pTab || 'upload', true);
+              const canOpenProj = isAdmin || (this.projects || []).some(p => p.id === project || p.id.toLowerCase() === project.toLowerCase());
+              if (!canOpenProj) {
+                this.showToast('Bu projeye erişim yetkiniz bulunmuyor veya proje mevcut değil.', 'error');
+                await this.showAppShell('projects', true);
+              } else {
+                await this.openProject(project, pTab || 'upload', true);
+              }
             } else if (create) {
-              if (typeof this.showCreateProjectModal === 'function') await this.showCreateProjectModal();
+              if (typeof this.showCreateProject === 'function') {
+                this.showCreateProject(true);
+              } else {
+                await this.showAppShell('projects', true);
+              }
             } else if (pTab === 'privacy' || urlParams.get('view') === 'privacy') {
               this.showPrivacy('workspace', true);
-            } else if (pTab) {
+            } else if (pTab && knownTabs.includes(pTab)) {
               await this.showAppShell(pTab, true);
             } else {
               const defaultTab = isAdmin ? 'admin' : 'agent';
@@ -176,9 +209,11 @@
       // Token gecersiz -- storage temizle
       if (typeof this.showLoading === 'function') this.showLoading(false);
       const wasGoogleToken = !!googleTokenFromUrl;
-      localStorage.removeItem('yolo_auth_token');
-      localStorage.removeItem('authToken');
-      sessionStorage.removeItem('authToken');
+      if (shouldClearToken || wasGoogleToken) {
+        localStorage.removeItem('yolo_auth_token');
+        localStorage.removeItem('authToken');
+        sessionStorage.removeItem('authToken');
+      }
       if (wasGoogleToken) {
         this._pendingAuthError = this._pendingAuthError ||
           'Google ile giris dogrulanamadi. Sunucu hatasi olabilir, lutfen tekrar deneyin.';
@@ -208,25 +243,44 @@
       return;
     }
 
-    // Normal akis -- token yok, landing veya auth ekrani
+    // Normal akis -- token yok: korumali URL'lere dogrudan girisi engelle
     const unauthParams = new URLSearchParams(window.location.search);
+    const cleanUnauthPath = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
     const uTab = unauthParams.get('tab');
-    const uAuth = unauthParams.get('auth');
+    const uAuth = unauthParams.get('auth') || (cleanUnauthPath === 'login' || cleanUnauthPath === 'register' ? cleanUnauthPath : null);
     const uEditor = unauthParams.get('editor');
-    if (uEditor) {
-      try {
-        await this.showEditor(uEditor, false);
-        return;
-      } catch (err) {
-        console.warn('Guest editor routing error:', err);
-      }
-    }
+    const uProject = unauthParams.get('project');
+    const uCreate = unauthParams.get('create');
+    const uInvite = unauthParams.get('invite') || unauthParams.get('accept_invite');
+    const protectedTabs = ['settings', 'team', 'projects', 'models', 'train', 'admin', 'explore', 'assets', 'agent'];
+    const isTryingProtectedRoute = !!(
+      uEditor ||
+      uProject ||
+      uCreate ||
+      (uTab && uTab !== 'privacy') ||
+      protectedTabs.includes(cleanUnauthPath)
+    );
 
-    if (uTab === 'privacy' || unauthParams.get('view') === 'privacy') {
+    if (uTab === 'privacy' || unauthParams.get('view') === 'privacy' || cleanUnauthPath === 'privacy') {
       this.showPrivacy('landing', false);
     } else if (uAuth === 'login' || uAuth === 'register') {
       this.showAuth(uAuth, false);
+    } else if (isTryingProtectedRoute && !uInvite) {
+      // Korumali bir sayfaya URL'den girilmeye calisildiysa giris ekranina yonlendir
+      try {
+        window.history.replaceState({ view: 'auth', params: { tab: 'login' } }, '', '/?auth=login');
+      } catch (_) {}
+      this.showAuth('login', false);
+      setTimeout(() => {
+        this._authAlert('Bu sayfaya erişmek için lütfen önce hesabınıza giriş yapın.', 'error');
+      }, 200);
+      return;
     } else {
+      if (cleanUnauthPath && cleanUnauthPath !== 'index.html' && !uInvite) {
+        try {
+          window.history.replaceState({ view: 'landing' }, '', '/');
+        } catch (_) {}
+      }
       this.showLanding(authError, false);
     }
     if (typeof window.triggerHeroDemoSlide === 'function') setTimeout(() => window.triggerHeroDemoSlide(0), 100);

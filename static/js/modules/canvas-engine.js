@@ -35,14 +35,20 @@
       });
     }
 
-    if (preferredCategory && !this.categories.some(c => c.id === preferredCategory)) {
-      this.categories.unshift({ id: preferredCategory, name: preferredCategory.replace(/_/g, ' '), image_count: 0 });
+    if (preferredCategory && !this.categories.some(c => c.id === preferredCategory || c.id.toLowerCase() === preferredCategory.toLowerCase())) {
+      this.showLoading(false);
+      this.showToast('Bu projeye erişim yetkiniz bulunmuyor veya proje mevcut değil.', 'error');
+      if (typeof this.showAppShell === 'function') {
+        await this.showAppShell('projects', true);
+      }
+      return false;
     }
 
     if (this.categories.length > 0 || preferredCategory) {
       let initialCat = preferredCategory || this.categories[0]?.id;
-      if (preferredCategory && this.categories.some(c => c.id === preferredCategory)) {
-        initialCat = preferredCategory;
+      if (preferredCategory && this.categories.some(c => c.id === preferredCategory || c.id.toLowerCase() === preferredCategory.toLowerCase())) {
+        const matched = this.categories.find(c => c.id === preferredCategory || c.id.toLowerCase() === preferredCategory.toLowerCase());
+        initialCat = matched ? matched.id : preferredCategory;
       } else if (!preferredCategory) {
         const saved = localStorage.getItem('yolo_last_category');
         if (saved && this.categories.some(c => c.id === saved)) {
@@ -53,7 +59,9 @@
       this.currentCategory = initialCat;
       this.updateActiveClassOptions();
       await this.loadCategoryImages();
+      return true;
     }
+    return false;
   } catch (err) {
     this.showToast('Kategoriler yüklenemedi', 'error');
     console.error(err);
@@ -122,7 +130,15 @@ updateActiveClassOptions() {
     const token = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     const res = await fetch(`/api/images?category=${encodeURIComponent(this.currentCategory)}`, { headers });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 || res.status === 403 || res.status === 404) {
+      this.showLoading(false);
+      this.showToast(data.detail || 'Bu projeye erişim yetkiniz bulunmuyor.', 'error');
+      if (typeof this.showAppShell === 'function') {
+        await this.showAppShell('projects', true);
+      }
+      return;
+    }
     this.images = data.images || [];
 
     const projClasses = this.getProjectClasses();

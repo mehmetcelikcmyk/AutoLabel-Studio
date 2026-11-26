@@ -44,6 +44,24 @@
     const pSubtab = p.get('subtab');
     const auth = p.get('auth');
     const create = p.get('create');
+    const token = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    const isAuthenticated = !!(token && this.currentUser);
+
+    if (!isAuthenticated) {
+      if (pTab === 'privacy' || p.get('view') === 'privacy') {
+        this.showPrivacy('landing', false);
+      } else if (auth === 'login' || auth === 'register') {
+        this.showAuth(auth, false);
+      } else if (editorProject || project || create || pTab) {
+        try {
+          window.history.replaceState({ view: 'auth', params: { tab: 'login' } }, '', '/?auth=login');
+        } catch (_) {}
+        this.showAuth('login', false);
+      } else {
+        this.showLanding(null, false);
+      }
+      return;
+    }
 
     if (!state || !state.view) {
       if (editorProject) {
@@ -67,7 +85,6 @@
       } else if (auth) {
         this.showAuth(auth, false);
       } else {
-        const token = localStorage.getItem('yolo_auth_token');
         if (token) {
           if (this.isProjectContext) this.closeProjectToWorkspace(false);
           this.showAppShell('agent', false);
@@ -524,6 +541,7 @@
   }
 
   showLanding(authError = null, pushHistory = true) {
+    if (typeof this.showLoading === 'function') this.showLoading(false);
     if (pushHistory) {
       this.navigateTo('landing');
     }
@@ -531,6 +549,7 @@
     window.scrollTo(0, 0);
     const lv = document.getElementById('landingView');
     if (lv) {
+      lv.classList.add('active');
       lv.style.display = 'block';
       lv.scrollTop = 0;
     }
@@ -2563,6 +2582,12 @@ hideAllViews() {
 }
 
   async showAppShell(wstab = 'agent', pushHistory = true) {
+  const token = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+  if (!token || !this.currentUser) {
+    if (typeof this.showLoading === 'function') this.showLoading(false);
+    this.showAuth('login', true);
+    return;
+  }
   this.currentView = 'workspace';
   this.hideAllViews();
 
@@ -2590,6 +2615,19 @@ hideAllViews() {
 }
 
   async switchWorkspaceTab(tabName, pushHistory = true) {
+    const validTabs = ['agent', 'projects', 'assets', 'explore', 'train', 'models', 'team', 'settings', 'admin'];
+    const isAdmin = !!(this.currentUser?.is_admin || this.currentUser?.role === 'admin');
+    if (tabName === 'admin' && !isAdmin) {
+      if (typeof this.showToast === 'function') {
+        this.showToast('Yönetici paneline erişim yetkiniz bulunmuyor.', 'warning');
+      }
+      tabName = 'projects';
+      pushHistory = true;
+    }
+    if (!validTabs.includes(tabName)) {
+      tabName = 'projects';
+      pushHistory = true;
+    }
     this.activeWorkspaceTab = tabName;
 
     // Lazy module loader

@@ -14,6 +14,22 @@
 
   class _EditorCoreExtension {
   async showEditor(categoryId, pushHistory = true, initialFilter = null, targetFilename = null, batchFilenamesFilter = null, batchId = null, batchName = null) {
+  const token = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+  if (!token || !this.currentUser) {
+    this.showLoading(false);
+    this.showAuth('login', true);
+    return;
+  }
+  const isAdmin = !!(this.currentUser?.is_admin || this.currentUser?.role === 'admin');
+  if (categoryId && Array.isArray(this.projects) && this.projects.length > 0 && !isAdmin) {
+    const canAccess = this.projects.some(p => p.id === categoryId || p.id.toLowerCase() === String(categoryId).toLowerCase());
+    if (!canAccess) {
+      this.showLoading(false);
+      this.showToast('Bu projeye erişim yetkiniz bulunmuyor veya proje mevcut değil.', 'error');
+      await this.showAppShell('projects', true);
+      return;
+    }
+  }
   // Butona tıklandığı İLK MİLİSANİYEDE yükleme göstergesini anında aç (boş ekranı önler)
   this.showLoading(true, 'Görseller ve Çalışma Alanı Hazırlanıyor...', 'Lütfen bekleyiniz, proje verileri yükleniyor...');
 
@@ -43,7 +59,10 @@
     this.currentFilter = initialFilter;
   }
 
-  await this.loadCategories(categoryId);
+  const catLoaded = await this.loadCategories(categoryId);
+  if (catLoaded === false) {
+    return;
+  }
   this.applyFilter();
 
   // Update Header Job Badge & Add to Dataset Action
