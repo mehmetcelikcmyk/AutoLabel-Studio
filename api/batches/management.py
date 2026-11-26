@@ -86,7 +86,10 @@ def get_project_batches(category: str = Query(...), token: Optional[str] = Query
                 images_set.add(f.name)
 
     try:
-        r2_objs = cf_r2_list_objects(prefix=category, limit=2500)
+        storage_for_list = get_project_storage_info(category)
+        r2_objs = cf_r2_list_objects(prefix=storage_for_list["r2_images_prefix"] + "/", limit=2500)
+        if not r2_objs:
+            r2_objs = cf_r2_list_objects(prefix=category, limit=2500)
         for obj in r2_objs:
             k = obj.get("key", "")
             fn = os.path.basename(k)
@@ -166,6 +169,7 @@ def get_project_batches(category: str = Query(...), token: Optional[str] = Query
                 all_batched_set.add(fn)
 
     unbatched_images = [fn for fn in images if fn not in all_batched_set]
+    batches_updated = False
     if unbatched_images:
         dt_str = datetime.now().strftime("%d.%m.%Y at %H:%M")
         batches.append({
@@ -182,7 +186,6 @@ def get_project_batches(category: str = Query(...), token: Optional[str] = Query
 
     processed_batches = []
     disk_images_set = set(images)
-    batches_updated = False
 
     # Projenin public olup olmadığını kontrol et
     is_public_proj = False
@@ -556,6 +559,8 @@ def delete_batch(data: dict, authorization: Optional[str] = Header(None)):
         try:
             storage = get_project_storage_info(cat)
             target_batch = next((b for b in batches if str(b.get("id")) in (str(batch_id), orig_batch_id)), None)
+            if not target_batch and str(batch_id).startswith("batch_unassigned"):
+                target_batch = next((b for b in batches if str(b.get("id", "")).startswith("batch_unassigned") or b.get("status") == "unassigned"), None)
 
             if target_batch:
                 all_imgs = target_batch.get("images", [])
@@ -630,6 +635,11 @@ def delete_batch(data: dict, authorization: Optional[str] = Header(None)):
                 cf_r2_upload(batches_file.read_bytes(), f"{storage['r2_project_prefix']}/batches.json", "application/json")
             except Exception:
                 pass
+            try:
+                from api.projects.images import invalidate_images_cache
+                invalidate_images_cache(cat)
+            except Exception:
+                pass
 
             return {
                 "status": "ok",
@@ -686,7 +696,7 @@ def move_batch_stage(data: dict, authorization: Optional[str] = Header(None)):
             b_imgs = list(b.get("images", []))
             total = len(b_imgs)
 
-            if b_id == str(batch_id):
+            if b_id == str(batch_id) or (not found and str(batch_id).startswith("batch_unassigned") and b_id.startswith("batch_unassigned")):
                 found = True
                 if target_stage == "unassigned":
                     b["status"] = "unassigned"
@@ -797,6 +807,11 @@ def move_batch_stage(data: dict, authorization: Optional[str] = Header(None)):
             cf_r2_upload(batches_file.read_bytes(), f"{storage['r2_project_prefix']}/batches.json", "application/json")
         except Exception as r2_err:
             print(f"[R2 Sync Warning]: {r2_err}")
+        try:
+            from api.projects.images import invalidate_images_cache
+            invalidate_images_cache(cat)
+        except Exception:
+            pass
 
         return {"status": "ok", "target_stage": target_stage, "message": f"Yığın '{target_stage}' aşamasına başarıyla taşındı."}
     except HTTPException:

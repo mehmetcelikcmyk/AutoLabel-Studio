@@ -1212,13 +1212,7 @@ setupModalEvents() {
     }
   });
 
-  document.getElementById('hubDeleteProjectBtn')?.addEventListener('click', async () => {
-    if (!this.activeHubProjectId) return;
-    await this.deleteProject(this.activeHubProjectId);
-    this.showDashboard();
-  });
-
-  // Wire Training & Export Studio Events
+  // Wire Training & Export Studio Events (hubDeleteProjectBtn is already wired in workspace-ui.js)
   this.setupTrainingStudio();
   this.setupExportStudio();
 

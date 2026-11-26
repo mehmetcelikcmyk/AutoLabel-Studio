@@ -58,7 +58,7 @@
     const token = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
     const tokenQuery = token ? `&token=${encodeURIComponent(token)}` : '';
     const headers = this.getAuthHeaders ? this.getAuthHeaders() : (token ? { 'Authorization': `Bearer ${token}` } : {});
-    const res = await fetch(`/api/projects/batches?category=${encodeURIComponent(this.activeHubProjectId)}${tokenQuery}`, { headers });
+    const res = await fetch(`/api/projects/batches?category=${encodeURIComponent(this.activeHubProjectId)}${tokenQuery}&_t=${Date.now()}`, { headers, cache: 'no-store' });
     const data = await res.json();
     const batches = data.batches || [];
 
@@ -600,22 +600,26 @@
 
   const handleMove = async (targetStage, stageTitle) => {
     closeMenu();
+    this.showLoading(true, 'Yığın taşınıyor...');
     try {
       const res = await fetch('/api/projects/move-batch-stage', {
         method: 'POST',
         headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ category: currentProj, batch_id: batch.id, target_stage: targetStage })
       });
+      const resData = await res.json().catch(() => ({}));
       if (res.ok) {
-        this.showToast(`Yığın başarıyla "${stageTitle}" sütununa taşındı.`, 'success');
+        this.showToast(`Yığın "${stageTitle}" sütununa taşındı.`, 'success');
         await this.loadHubProjectData();
-        this.renderAnnotateKanban();
+        await this.renderAnnotateKanban();
       } else {
-        this.showToast('Taşıma işlemi başarısız oldu.', 'error');
+        this.showToast(resData.detail || 'Taşıma işlemi başarısız oldu.', 'error');
       }
     } catch (e) {
       console.error(e);
       this.showToast('Taşıma sırasında hata oluştu.', 'error');
+    } finally {
+      this.showLoading(false);
     }
   };
 
@@ -752,7 +756,8 @@
         if (res.ok && resData.status === 'ok') {
           this.showToast(resData.message || 'Yığın başarıyla silindi.', 'success');
           await this.loadHubProjectData();
-          this.renderAnnotateKanban();
+          await this.renderAnnotateKanban();
+          if (typeof this.renderDatasetGallery === 'function') this.renderDatasetGallery();
         } else {
           this.showToast(resData.detail || 'Yığın silinemedi.', 'error');
         }

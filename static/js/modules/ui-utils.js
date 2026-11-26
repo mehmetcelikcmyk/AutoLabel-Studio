@@ -602,24 +602,30 @@ getClassName(classId) {
       const settingsModal = document.getElementById('projectSettingsModal');
       if (settingsModal) settingsModal.style.display = 'none';
 
-      // 1. Proje listelerini ve çalışma alanı istatistiklerini yenile
-      try {
-        if (typeof this.fetchProjects === 'function') await this.fetchProjects();
-        if (typeof this.loadDashboardProjects === 'function') await this.loadDashboardProjects();
-        if (typeof this.loadWorkspaceStats === 'function') await this.loadWorkspaceStats();
-        if (typeof this.loadCategories === 'function') await this.loadCategories();
-      } catch (refreshErr) {
-        console.warn('[deleteProject] Liste yenileme uyarısı:', refreshErr);
+      // 1. Önbellekten silinen projeyi anında düşür ve proje listelerini yenile
+      if (Array.isArray(this.projects)) {
+        this.projects = this.projects.filter(p => p.id !== category);
       }
+      if (typeof this.renderProjectsGrid === 'function') this.renderProjectsGrid();
 
-      // 2. Eğer silinen proje şu anda açıksa, projeyi kapat ve çalışma alanına dön
+      // 2. Eğer silinen proje şu anda açıksa, projeyi hemen kapat ve Projeler sekmesine dön
       if (this.isProjectContext || this.activeHubProjectId === category || this.currentCategory === category) {
         if (typeof this.closeProjectToWorkspace === 'function') {
           this.closeProjectToWorkspace(false);
         }
         if (typeof this.switchWorkspaceTab === 'function') {
-          this.switchWorkspaceTab('projects');
+          await this.switchWorkspaceTab('projects');
         }
+      }
+
+      try {
+        if (typeof this.fetchProjects === 'function') await this.fetchProjects();
+        if (typeof this.renderProjectsGrid === 'function') this.renderProjectsGrid();
+        if (typeof this.loadDashboardProjects === 'function') await this.loadDashboardProjects();
+        if (typeof this.loadWorkspaceStats === 'function') await this.loadWorkspaceStats();
+        if (typeof this.loadCategories === 'function') await this.loadCategories();
+      } catch (refreshErr) {
+        console.warn('[deleteProject] Liste yenileme uyarısı:', refreshErr);
       }
     } else {
       this.showToast(data.detail || 'Proje silinemedi.', 'error');

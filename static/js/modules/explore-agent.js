@@ -1578,7 +1578,8 @@ switchHubTab(tabName) {
     const token = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
     const tokenQuery = token ? `&token=${encodeURIComponent(token)}` : '';
 
-    const res = await fetch(`/api/project-settings?category=${encodeURIComponent(this.activeHubProjectId)}${tokenQuery}`, { headers });
+    const bust = `&_t=${Date.now()}`;
+    const res = await fetch(`/api/project-settings?category=${encodeURIComponent(this.activeHubProjectId)}${tokenQuery}${bust}`, { headers, cache: 'no-store' });
     const data = await res.json();
     this.currentHubMeta = data;
     // Projedeki rol ve yönetim yetkisi (backend'den gelir)
@@ -1608,14 +1609,14 @@ switchHubTab(tabName) {
       batchInput.value = `Uploaded on ${dtStr} at ${timeStr}`;
     }
 
-    // Fetch full image list
-    const imgRes = await fetch(`/api/images?category=${encodeURIComponent(this.activeHubProjectId)}${tokenQuery}`, { headers });
+    // Fetch full image list (cache-busted so delete/upload changes appear immediately)
+    const imgRes = await fetch(`/api/images?category=${encodeURIComponent(this.activeHubProjectId)}${tokenQuery}&_t=${Date.now()}`, { headers, cache: 'no-store' });
     const imgData = await imgRes.json();
     this.currentHubImages = imgData.images || [];
-    this._lastImageFetchCat = cat; // openBatchReview cache kontrol\u00fc i\u00e7in senkronize et
+    this._lastImageFetchCat = cat; // openBatchReview cache kontrolü için senkronize et
 
-    // Ensure live accurate badge counts from fetched image list
-    if (this.currentHubImages && this.currentHubImages.length > 0) {
+    // Ensure live accurate badge counts from fetched image list (including 0 when all batches deleted)
+    if (Array.isArray(this.currentHubImages)) {
       const totalCount = this.currentHubImages.length;
       const emptyCount = this.currentHubImages.filter(i => !i.has_label_file || i.box_count === 0).length;
 
