@@ -1072,7 +1072,7 @@ async openAgentSession(sessionId) {
                     <div style="font-size:0.78rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:6px;">Önerilen Algılama Sınıfları (${(bp.classes || []).length}):</div>
                     <div style="display:flex; flex-wrap:wrap; gap:4px;">${classBadges}</div>
                   </div>
-                  <button class="btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:8px;" onclick="window._yoloEditor && window._yoloEditor.createProjectFromBlueprint()">
+                  <button class="btn-primary btn-sm chat-launch-blueprint-btn" style="display:inline-flex; align-items:center; gap:8px;" onclick="(window.editorApp || window._yoloEditor)?.createProjectFromBlueprint(this)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     <span>Bu Projeyi Şimdi Oluştur & Başlat</span>
                   </button>
@@ -1274,9 +1274,10 @@ startAgentConversation(initialPrompt) {
           </span>
         `).join('');
 
+      const launchBtnId = 'chatLaunchProjectBtn_' + Date.now();
       const replyHtml = `
           <div>
-            <p style="margin-bottom:12px; font-weight:600; color:#f8fafc;">Harika bir fikir! İsteğinizi analiz ettim ve projeniz için uygun veri seti mimarisini hazırladım:</p>
+            <p style="margin-bottom:12px; font-weight:600; color:#f8fafc;">İsteğinizi analiz ettim ve projeniz için uygun veri seti mimarisini hazırladım:</p>
             <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:16px; margin:10px 0;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
                 <strong style="font-size:1.05rem; color:#60a5fa;">${this._escapeHtml(bp.name)}</strong>
@@ -1287,7 +1288,7 @@ startAgentConversation(initialPrompt) {
                 <div style="font-size:0.78rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:6px;">Önerilen Algılama Sınıfları (${bp.classes.length}):</div>
                 <div style="display:flex; flex-wrap:wrap; gap:4px;">${classBadges}</div>
               </div>
-              <button class="btn-primary btn-sm" id="chatLaunchProjectBtn" style="display:inline-flex; align-items:center; gap:8px;">
+              <button class="btn-primary btn-sm chat-launch-blueprint-btn" id="${launchBtnId}" style="display:inline-flex; align-items:center; gap:8px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 <span>Bu Projeyi Şimdi Oluştur & Başlat</span>
               </button>
@@ -1297,8 +1298,10 @@ startAgentConversation(initialPrompt) {
         `;
 
       this.appendChatMessage('assistant', replyHtml, true);
-      document.getElementById('chatLaunchProjectBtn')?.addEventListener('click', () => {
-        this.createProjectFromBlueprint();
+      const launchBtnEl = document.getElementById(launchBtnId);
+      launchBtnEl?.addEventListener('click', () => {
+        this.currentBlueprint = bp;
+        this.createProjectFromBlueprint(launchBtnEl);
       });
 
     } else {
@@ -1388,20 +1391,19 @@ appendChatMessage(role, content, isHtml = false) {
   this.startAgentConversation(promptText);
 }
 
-  async createProjectFromBlueprint() {
-  if (!this.currentBlueprint) return;
+  async createProjectFromBlueprint(triggerBtn = null) {
+  if (!this.currentBlueprint) {
+    this.showToast('Oluşturulacak proje taslağı bulunamadı.', 'warning');
+    return;
+  }
   const bp = this.currentBlueprint;
-  const btn = document.getElementById('chatLaunchProjectBtn') || document.getElementById('blueprintLaunchBtn');
+  const btn = triggerBtn || document.querySelector('.chat-launch-blueprint-btn') || document.getElementById('blueprintLaunchBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Oluşturuluyor...'; }
 
   try {
-    const token = localStorage.getItem('yolo_auth_token') || '';
     const res = await fetch('/api/projects/create', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
+      headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         folder_name: bp.folder,
         display_name: bp.name,
@@ -1413,11 +1415,12 @@ appendChatMessage(role, content, isHtml = false) {
         workspace_id: this.activeWorkspaceId || localStorage.getItem('activeWorkspaceId') || null
       })
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (res.ok && data.status === 'ok') {
       this.showToast(`'${bp.name}' projesi başarıyla oluşturuldu.`, 'success');
       await this.fetchProjects();
-      await this.openProject(bp.folder, 'upload');
+      const createdId = data.project_id || bp.folder;
+      await this.openProject(createdId, 'upload');
 
     } else {
       this.showToast(data.detail || 'Proje oluşturulamadı.', 'error');

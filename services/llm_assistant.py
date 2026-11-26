@@ -18,30 +18,32 @@ def call_gemini_llm(user_prompt: str, image_bytes: Optional[bytes] = None) -> Op
     if not keys:
         return None
 
-    for key in keys:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={key}"
-            parts = []
-            if image_bytes:
-                parts.append({
-                    "inline_data": {
-                        "mime_type": "image/jpeg",
-                        "data": base64.b64encode(image_bytes).decode("utf-8")
-                    }
-                })
-            parts.append({"text": user_prompt})
+    for model_name in ("gemini-2.5-flash", "gemini-2.0-flash"):
+        for key in keys:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
+                parts = []
+                if image_bytes:
+                    parts.append({
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(image_bytes).decode("utf-8")
+                        }
+                    })
+                parts.append({"text": user_prompt})
 
-            req_data = json.dumps({"contents": [{"parts": parts}]}).encode("utf-8")
-            req = _urllib_req.Request(url, data=req_data, headers={"Content-Type": "application/json"})
-            with _urllib_req.urlopen(req, timeout=14) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                candidates = data.get("candidates", [])
-                if candidates and "content" in candidates[0]:
-                    parts = candidates[0]["content"].get("parts", [])
-                    if parts and "text" in parts[0]:
-                        return parts[0]["text"]
-        except Exception:
-            continue
+                req_data = json.dumps({"contents": [{"parts": parts}]}).encode("utf-8")
+                req = _urllib_req.Request(url, data=req_data, headers={"Content-Type": "application/json"})
+                with _urllib_req.urlopen(req, timeout=20) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    candidates = data.get("candidates", [])
+                    if candidates and "content" in candidates[0]:
+                        out_parts = candidates[0]["content"].get("parts", [])
+                        if out_parts and "text" in out_parts[0]:
+                            return out_parts[0]["text"]
+            except Exception as e:
+                print(f"[Gemini {model_name} Warning] {e}")
+                continue
     return None
 
 
@@ -95,19 +97,20 @@ def call_groq_llm(user_prompt: str) -> Optional[str]:
         try:
             url = "https://api.groq.com/openai/v1/chat/completions"
             req_data = json.dumps({
-                "model": "qwen/qwen3.6-27b",
+                "model": "llama-3.3-70b-versatile",
                 "messages": [{"role": "user", "content": user_prompt}],
-                "max_tokens": 1024
+                "max_tokens": 1500
             }).encode("utf-8")
 
             req = _urllib_req.Request(url, data=req_data, headers={
                 "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json"
             })
-            with _urllib_req.urlopen(req, timeout=14) as resp:
+            with _urllib_req.urlopen(req, timeout=20) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data["choices"][0]["message"]["content"]
-        except Exception:
+        except Exception as e:
+            print(f"[Groq Warning] {e}")
             continue
     return None
 
@@ -147,15 +150,15 @@ def query_multi_ai_chat(prompt: str, image_bytes: Optional[bytes] = None, histor
 
     res = call_gemini_llm(full_prompt, image_bytes)
     if res:
-        return res, "Google Gemini 3.6 Flash"
+        return res, "Google Gemini 2.5 Flash"
 
     res = call_openai_llm(full_prompt, image_bytes)
     if res:
-        return res, "OpenAI GPT-4o"
+        return res, "OpenAI GPT-4o Mini"
 
     res = call_groq_llm(full_prompt)
     if res:
-        return res, "Groq Qwen 3.6"
+        return res, "Groq Llama 3.3 70B"
 
     return None, "local_ai"
 

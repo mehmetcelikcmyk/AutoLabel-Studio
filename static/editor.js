@@ -2223,9 +2223,9 @@ class DatasetEditor {
   }
 
   async openProject(projectId, defaultTab = 'upload', pushHistory = true) {
-    if (typeof this.loadHubProjectData !== 'function' && typeof this._lazyLoadModule === 'function') {
+    if (!document.querySelector('script[src*="project-hub.js"]') && typeof this._lazyLoadModule === 'function') {
       try {
-        await this._lazyLoadModule('js/modules/project-hub.js');
+        await this._lazyLoadModule('/js/modules/project-hub.js');
       } catch (err) {
         console.error('[openProject] project-hub yukleme hatasi:', err);
       }

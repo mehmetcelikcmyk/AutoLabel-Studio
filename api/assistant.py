@@ -178,15 +178,19 @@ def agent_suggest(req: AgentSuggestRequest, authorization: Optional[str] = Heade
         except Exception:
             pass
 
-    # Load prior messages for LLM context (scoped strictly to authenticated user)
+    # Load latest 15 prior messages (including blueprint JSON so AI remembers proposed projects/classes)
     prior_messages = []
     try:
         d1_msgs = cf_d1_query(
-            "SELECT role, content FROM ai_messages WHERE chat_id = ? AND LOWER(user_email) = ? ORDER BY id ASC LIMIT 15",
+            "SELECT role, content, blueprint_json FROM ai_messages WHERE chat_id = ? AND LOWER(user_email) = ? ORDER BY id DESC LIMIT 15",
             [sid, user_email]
         )
         if d1_msgs:
-            prior_messages = [{"role": m["role"], "content": m["content"]} for m in d1_msgs]
+            for m in reversed(d1_msgs):
+                text = m.get("content") or ""
+                if m.get("blueprint_json"):
+                    text = f"{text}\n[Önerilen Proje Taslağı]: {m['blueprint_json']}".strip()
+                prior_messages.append({"role": m["role"], "content": text})
         else:
             all_history = load_chat_history()
             if user_email in all_history and sid in all_history[user_email]:
