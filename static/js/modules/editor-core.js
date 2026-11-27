@@ -1374,10 +1374,16 @@ setupModalEvents() {
     if (m) {
       m.style.display = 'flex';
       m.classList.add('active');
+      m.style.opacity = '1';
+      m.style.pointerEvents = 'auto';
       const cStep = document.getElementById('batchConfigStep');
       const pStep = document.getElementById('batchProgressStep');
       if (cStep) cStep.style.display = 'none';
       if (pStep) pStep.style.display = 'flex';
+      if (this._lastBatchStatusData) {
+        this._applyBatchProgressUI(this._lastBatchStatusData);
+      }
+      this.pollBatchStatus();
     }
   };
 
@@ -1487,6 +1493,7 @@ openClassConfigModal(catId) {
 
   // Check if job is currently running on backend
   let isRunning = false;
+  let runningStatusData = null;
   try {
     const chk = await fetch(`/api/projects/batch-status?category=${encodeURIComponent(finalCatId)}`, {
       headers: this.getAuthHeaders()
@@ -1495,6 +1502,7 @@ openClassConfigModal(catId) {
       const cData = await chk.json();
       if (cData && cData.status === 'running') {
         isRunning = true;
+        runningStatusData = cData;
       }
     }
   } catch (e) { }
@@ -1511,6 +1519,9 @@ openClassConfigModal(catId) {
   if (isRunning) {
     if (cStep) cStep.style.display = 'none';
     if (pStep) pStep.style.display = 'flex';
+    if (runningStatusData) {
+      this._applyBatchProgressUI(runningStatusData);
+    }
     this.pollBatchStatus();
   } else {
     if (cStep) cStep.style.display = 'flex';
@@ -1590,13 +1601,54 @@ openClassConfigModal(catId) {
   }
 }
 
+_applyBatchProgressUI(data) {
+  if (!data || data.status !== 'running') return;
+  this._lastBatchStatusData = data;
+
+  const total = data.total || 0;
+  const current = data.current || 0;
+  const newly = data.newly_labeled || 0;
+  const remaining = Math.max(0, total - current);
+  const pct = total > 0 ? ((current / total) * 100).toFixed(1) : '0.0';
+
+  const pBar = document.getElementById('batchProgressBar');
+  const pPct = document.getElementById('batchProgressPct');
+  const pCount = document.getElementById('batchProcessedCount');
+  const pRemaining = document.getElementById('batchRemainingCount');
+  const pNew = document.getElementById('batchNewCount');
+  const pTitle = document.getElementById('batchStatusTitle');
+  const pSub = document.getElementById('batchStatusSub');
+  const pDetail = document.getElementById('batchStatusDetail');
+
+  if (pBar) pBar.style.width = `${pct}%`;
+  if (pPct) pPct.textContent = `%${pct}`;
+  if (pCount) {
+    pCount.textContent = total > 0 ? `${current.toLocaleString()} / ${total.toLocaleString()} Resim İşlendi` : (data.status_message || 'Taranıyor ve hazırlanıyor...');
+  }
+  if (pRemaining) pRemaining.textContent = total > 0 ? `Kalan: ${remaining.toLocaleString()} resim` : 'Kalan: Hesaplanıyor...';
+  if (pNew) pNew.textContent = `+${newly.toLocaleString()} yeni etiketlendi`;
+  if (pTitle) pTitle.textContent = 'Yapay zeka nesneleri tespit ediyor...';
+  if (pSub) pSub.textContent = this.activeModalBatchName ? `Yığın: ${this.activeModalBatchName}` : 'Lütfen bekleyiniz.';
+  if (pDetail) pDetail.textContent = data.eta_str ? `Kalan Süre: ~${data.eta_str} • İşlem devam ediyor` : (data.status_message || 'İşlem devam ediyor');
+
+  const fwTitle = document.getElementById('floatWidgetTitle');
+  const fwPct = document.getElementById('floatWidgetPct');
+  const fwSub = document.getElementById('floatWidgetSub');
+  if (fwTitle) fwTitle.textContent = `${data.category || this.activeModalCategory || 'AI'}`;
+  if (fwPct) fwPct.textContent = `%${pct}`;
+  if (fwSub) fwSub.textContent = data.eta_str ? `Kalan: ~${data.eta_str} (${current}/${total})` : (current > 0 || total > 0 ? `${current}/${total} işlendi` : (data.status_message || 'Hazırlanıyor...'));
+}
+
 pollBatchStatus() {
   if (this.batchPollTimer) clearInterval(this.batchPollTimer);
   if (!this.activeModalCategory) return;
 
-  this.batchPollTimer = setInterval(async () => {
+  let consecutiveErrors = 0;
+
+  const doPoll = async () => {
     if (!this.activeModalCategory) {
       clearInterval(this.batchPollTimer);
+      this.batchPollTimer = null;
       return;
     }
     try {
@@ -1604,52 +1656,24 @@ pollBatchStatus() {
         headers: this.getAuthHeaders()
       });
       if (!res.ok) {
-        // Eğer 401 veya hata geldiyse timer'ı hemen durdur, sunucuyu döngüye sokma
-        clearInterval(this.batchPollTimer);
-        const fw = document.getElementById('batchFloatingWidget');
-        if (fw) fw.style.display = 'none';
+        if (res.status === 401 || res.status === 403 || ++consecutiveErrors >= 5) {
+          clearInterval(this.batchPollTimer);
+          this.batchPollTimer = null;
+          const fw = document.getElementById('batchFloatingWidget');
+          if (fw) fw.style.display = 'none';
+        }
         return;
       }
+      consecutiveErrors = 0;
       const data = await res.json();
 
       const fw = document.getElementById('batchFloatingWidget');
-      const fwTitle = document.getElementById('floatWidgetTitle');
-      const fwPct = document.getElementById('floatWidgetPct');
-      const fwSub = document.getElementById('floatWidgetSub');
 
       if (data.status === 'running') {
-        const total = data.total || 0;
-        const current = data.current || 0;
-        const newly = data.newly_labeled || 0;
-        const remaining = Math.max(0, total - current);
-        const pct = total > 0 ? ((current / total) * 100).toFixed(1) : '0.0';
-
-        const pBar = document.getElementById('batchProgressBar');
-        const pPct = document.getElementById('batchProgressPct');
-        const pCount = document.getElementById('batchProcessedCount');
-        const pRemaining = document.getElementById('batchRemainingCount');
-        const pNew = document.getElementById('batchNewCount');
-        const pTitle = document.getElementById('batchStatusTitle');
-        const pSub = document.getElementById('batchStatusSub');
-        const pDetail = document.getElementById('batchStatusDetail');
-
-        if (pBar) pBar.style.width = `${pct}%`;
-        if (pPct) pPct.textContent = `%${pct}`;
-        if (pCount) {
-          pCount.textContent = total > 0 ? `${current.toLocaleString()} / ${total.toLocaleString()} Resim İşlendi` : (data.status_message || 'Taranıyor ve hazırlanıyor...');
-        }
-        if (pRemaining) pRemaining.textContent = `Kalan: ${remaining.toLocaleString()} resim`;
-        if (pNew) pNew.textContent = `+${newly.toLocaleString()} yeni etiketlendi`;
-        if (pTitle) pTitle.textContent = 'Yapay zeka nesneleri tespit ediyor...';
-        if (pSub) pSub.textContent = 'Lütfen bekleyiniz.';
-        if (pDetail) pDetail.textContent = data.eta_str ? `Kalan Süre: ~${data.eta_str} • İşlem devam ediyor` : (data.status_message || 'İşlem devam ediyor');
-
-        // Update floating widget
-        if (fwTitle) fwTitle.textContent = `${this.activeModalCategory}`;
-        if (fwPct) fwPct.textContent = `%${pct}`;
-        if (fwSub) fwSub.textContent = data.eta_str ? `Kalan: ~${data.eta_str} (${current}/${total})` : (current > 0 || total > 0 ? `${current}/${total} işlendi` : (data.status_message || 'Hazırlanıyor...'));
+        this._applyBatchProgressUI(data);
 
       } else if (data.status === 'completed') {
+        this._lastBatchStatusData = null;
         const pBar = document.getElementById('batchProgressBar');
         const pPct = document.getElementById('batchProgressPct');
         const pTitle = document.getElementById('batchStatusTitle');
@@ -1665,6 +1689,7 @@ pollBatchStatus() {
         if (fw) fw.style.display = 'none';
 
         clearInterval(this.batchPollTimer);
+        this.batchPollTimer = null;
         setTimeout(() => {
           const m = document.getElementById('batchAutoLabelModal');
           if (m) {
@@ -1680,6 +1705,7 @@ pollBatchStatus() {
         }, 1800);
 
       } else if (data.status === 'failed' || data.status === 'idle') {
+        this._lastBatchStatusData = null;
         const pTitle = document.getElementById('batchStatusTitle');
         const pSub = document.getElementById('batchStatusSub');
         const pDetail = document.getElementById('batchStatusDetail');
@@ -1703,6 +1729,7 @@ pollBatchStatus() {
         if (pStep) pStep.style.display = 'none';
 
       } else {
+        this._lastBatchStatusData = null;
         // stopped
         const pTitle = document.getElementById('batchStatusTitle');
         const pSub = document.getElementById('batchStatusSub');
@@ -1732,10 +1759,15 @@ pollBatchStatus() {
         }
       }
     } catch (e) {
-      clearInterval(this.batchPollTimer);
-      this.batchPollTimer = null;
+      if (++consecutiveErrors >= 5) {
+        clearInterval(this.batchPollTimer);
+        this.batchPollTimer = null;
+      }
     }
-  }, 2000);
+  };
+
+  doPoll();
+  this.batchPollTimer = setInterval(doPoll, 2000);
 }
 
   async stopBatchAutoLabel() {
@@ -1777,6 +1809,7 @@ pollBatchStatus() {
       if (fw) {
         fw.style.display = 'flex';
         fw.onclick = () => {
+          fw.style.display = 'none';
           const m = document.getElementById('batchAutoLabelModal');
           const cStep = document.getElementById('batchConfigStep');
           const pStep = document.getElementById('batchProgressStep');
@@ -1787,12 +1820,14 @@ pollBatchStatus() {
             m.classList.add('active');
             m.style.opacity = '1';
             m.style.pointerEvents = 'all';
+            if (this._lastBatchStatusData) {
+              this._applyBatchProgressUI(this._lastBatchStatusData);
+            }
+            this.pollBatchStatus();
           }
         };
       }
-      if (fwTitle) fwTitle.textContent = `${cat}`;
-      if (fwPct) fwPct.textContent = `%${pct}`;
-      if (fwSub) fwSub.textContent = data.eta_str ? `Kalan: ~${data.eta_str} (${current}/${total})` : `${current}/${total} işlendi`;
+      this._applyBatchProgressUI(data);
 
       this.showToast(`Arka planda devam eden otomatik etiketleme algılandı (%${pct}) ⚡`, 'info');
       this.pollBatchStatus();

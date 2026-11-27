@@ -107,18 +107,34 @@ def _get_container_mem_limit_mb() -> float:
     return 0.0
 
 
+def _trim_process_memory() -> None:
+    """Run Python GC and release freed glibc heap pages back to Linux kernel."""
+    import gc
+    gc.collect()
+    try:
+        if os.name == "posix":
+            import ctypes
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass
+
+
 def _resolve_safe_model_key(model_key: Optional[str], allow_heavy_fallback: bool = True) -> str:
     """Resolve requested model key and guard against OOM on 1 GB RAM containers."""
     resolved = model_key or DEFAULT_MODEL_KEY
     mem_mb = _get_container_mem_limit_mb()
-    if 0 < mem_mb <= 1400.0 and resolved in ("yolov8x-worldv2", "yolov8l-worldv2"):
-        if not allow_heavy_fallback:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Sunucu bellek limiti ({int(mem_mb)} MB) nedeniyle '{resolved}' yüklenemiyor. yolov8s-worldv2 veya yolov8m-worldv2 seçin.",
-            )
-        logger.warning(f"Low-RAM container ({mem_mb:.0f} MB): downgrading '{resolved}' to 'yolov8m-worldv2' to avoid OOM.")
-        return "yolov8m-worldv2"
+    if 0 < mem_mb <= 1400.0:
+        if resolved in ("yolov8x-worldv2", "yolov8l-worldv2"):
+            if not allow_heavy_fallback:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Sunucu bellek limiti ({int(mem_mb)} MB) nedeniyle '{resolved}' yüklenemiyor. yolov8s-worldv2 seçin.",
+                )
+            logger.warning(f"Low-RAM container ({mem_mb:.0f} MB): downgrading '{resolved}' to 'yolov8s-worldv2' to avoid OOM.")
+            return "yolov8s-worldv2"
+        if allow_heavy_fallback and resolved == "yolov8m-worldv2":
+            logger.warning(f"Low-RAM container ({mem_mb:.0f} MB): downgrading 'yolov8m-worldv2' to 'yolov8s-worldv2' for sustained batch stability.")
+            return "yolov8s-worldv2"
     return resolved
 
 
@@ -140,7 +156,7 @@ def _encode_classes_lightweight(classes: List[str], device: str = "cpu"):
 
     if "cpu" in str(device):
         try:
-            torch.set_num_threads(min(2, os.cpu_count() or 2))
+            torch.set_num_threads(1)
         except Exception:
             pass
 
@@ -234,7 +250,7 @@ def _encode_classes_lightweight(classes: List[str], device: str = "cpu"):
                     _TEXT_EMBED_CACHE[cname] = x[row_i].detach().cpu().clone()
 
         del sd_half, attn_mask, tokens
-        gc.collect()
+        _trim_process_memory()
 
     stacked = __import__("torch").stack([_TEXT_EMBED_CACHE[c] for c in classes], dim=0).unsqueeze(0).to(device)
     return stacked
@@ -345,7 +361,7 @@ def get_ai_model(model_key: Optional[str] = None, device: Optional[str] = None, 
 
             _MODEL_CACHE[cache_key] = model
             _LAST_CLASSES = []
-            gc.collect()
+            _trim_process_memory()
             return model, model_key
         except Exception as ex:
             logger.error(f"Error loading model {model_key}: {ex}")
@@ -389,8 +405,15 @@ def run_model_predict(model, *args, **kwargs):
     """Thread-safe model.predict wrapper using torch.inference_mode() under _MODEL_LOCK."""
     import torch
     with _MODEL_LOCK:
+        try:
+            if "cpu" in str(_ACTIVE_DEVICE):
+                torch.set_num_threads(1)
+        except Exception:
+            pass
         with torch.inference_mode():
-            return model.predict(*args, **kwargs)
+            res = model.predict(*args, **kwargs)
+        _trim_process_memory()
+        return res
 
 
 

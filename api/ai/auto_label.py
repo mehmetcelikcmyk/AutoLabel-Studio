@@ -22,7 +22,7 @@ from fastapi import APIRouter, HTTPException, Query, Header
 from core.config import ROOT_DIR
 from core.database import cf_r2_get_object
 from core.security import get_current_user, check_project_permission
-from api.ai_models import get_ai_model, set_classes_if_changed, run_model_predict, _MODEL_LOCK, _ACTIVE_DEVICE
+from api.ai_models import get_ai_model, set_classes_if_changed, run_model_predict, _trim_process_memory, _MODEL_LOCK, _ACTIVE_DEVICE
 from api.shared.models import AutoLabelRequest, BatchAutoLabelRequest
 from api.shared.utils import load_project_config, get_project_storage_info
 from services.image_processing import load_image_rgb, save_image_preview, safe_bbox, filter_boxes
@@ -38,23 +38,34 @@ def _make_batch_key(user_id: Optional[Any], category: str) -> str:
     return f"{uid}:{str(category).strip()}"
 
 
-def _load_image_with_r2_fallback(category: str, filename: str) -> Optional[np.ndarray]:
+def _load_image_with_r2_fallback(category: str, filename: str, save_cache: bool = True) -> Optional[np.ndarray]:
     import tempfile
     import io
     from PIL import Image as PILImage
+
+    def _cap_cpu_resolution(rgb_arr: np.ndarray) -> np.ndarray:
+        if "cuda" not in str(_ACTIVE_DEVICE) and rgb_arr is not None:
+            h_i, w_i = rgb_arr.shape[:2]
+            max_d = max(h_i, w_i)
+            if max_d > 1280:
+                scale = 1280.0 / float(max_d)
+                new_w = max(1, int(round(w_i * scale)))
+                new_h = max(1, int(round(h_i * scale)))
+                return cv2.resize(rgb_arr, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        return rgb_arr
 
     local_path = ROOT_DIR / category / filename
     if local_path.exists():
         img = load_image_rgb(local_path)
         if img is not None:
-            return img
+            return _cap_cpu_resolution(img)
 
     cache_dir = Path(tempfile.gettempdir()) / "als_cache" / category
     cache_path = cache_dir / filename
     if cache_path.exists():
         img = load_image_rgb(cache_path)
         if img is not None:
-            return img
+            return _cap_cpu_resolution(img)
 
     try:
         storage = get_project_storage_info(category)
@@ -62,13 +73,18 @@ def _load_image_with_r2_fallback(category: str, filename: str) -> Optional[np.nd
         if not img_bytes:
             img_bytes = cf_r2_get_object(f"{category}/{filename}")
         if img_bytes:
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            cache_path.write_bytes(img_bytes)
-            img = load_image_rgb(cache_path)
-            if img is not None:
-                return img
-            pil_img = PILImage.open(io.BytesIO(img_bytes)).convert("RGB")
-            return np.array(pil_img)
+            if save_cache:
+                try:
+                    cache_dir.mkdir(parents=True, exist_ok=True)
+                    cache_path.write_bytes(img_bytes)
+                    img = load_image_rgb(cache_path)
+                    if img is not None:
+                        return _cap_cpu_resolution(img)
+                except Exception:
+                    pass
+            with PILImage.open(io.BytesIO(img_bytes)) as pil_img:
+                rgb_img = pil_img.convert("RGB")
+                return _cap_cpu_resolution(np.array(rgb_img))
     except Exception as r2_err:
         print(f"[R2 Image Load Warning] {category}/{filename}: {r2_err}")
 
@@ -398,7 +414,7 @@ def _run_batch_auto_label_thread(
             for fname in chunk_fnames:
                 stem = os.path.splitext(fname)[0]
                 try:
-                    img = _load_image_with_r2_fallback(category, fname)
+                    img = _load_image_with_r2_fallback(category, fname, save_cache=False)
                     if img is not None:
                         valid_imgs.append(img)
                         valid_stems.append(stem)
@@ -487,7 +503,7 @@ def _run_batch_auto_label_thread(
                         f.writelines(lines)
                     # Oluşturulan etiketi Cloudflare R2'ye de yedekle
                     try:
-                        if storage_info and storage_info.get("r2_configured"):
+                        if storage_info and storage_info.get("r2_labels_prefix"):
                             from core.database import cf_r2_upload
                             cf_r2_upload("".join(lines).encode("utf-8"), f"{storage_info['r2_labels_prefix']}/{txt_path.name}", "text/plain")
                     except Exception:
@@ -515,6 +531,7 @@ def _run_batch_auto_label_thread(
 
                             preview_path = previews_dir / f"{stem}.jpg"
                             save_image_preview(preview_path, preview_img)
+                            del preview_img
                         except Exception:
                             pass
 
@@ -525,8 +542,10 @@ def _run_batch_auto_label_thread(
             processed_count += len(chunk_fnames)
             BATCH_JOBS[batch_key]["current"] = processed_count
             del valid_imgs
-            if "cpu" in str(_ACTIVE_DEVICE) and processed_count % 10 == 0:
-                gc.collect()
+            if "batch_results" in locals():
+                del batch_results
+            _trim_process_memory()
+            time.sleep(0.01)
 
             elapsed = time.time() - t_start
             if elapsed > 0 and processed_count > 0:

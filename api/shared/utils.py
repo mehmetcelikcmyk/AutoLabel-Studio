@@ -15,7 +15,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import HTTPException
 from PIL import Image
 
-from core.config import ROOT_DIR, CONFIG_FILE
+from core.config import ROOT_DIR, CONFIG_FILE, load_settings
 from core.database import cf_d1_query
 
 DEFAULT_CLASS_MAPPING = {
@@ -246,6 +246,16 @@ def get_project_storage_info(category: str) -> Dict[str, str]:
 
     safe_owner = owner_email.replace("@", "_at_").replace(".", "_")
     prefix = f"users/{safe_owner}/{workspace_id}/{clean_cat}"
+    settings = load_settings()
+    r2_configured = all(
+        settings.get(k)
+        for k in (
+            "cloudflare_account_id",
+            "cloudflare_r2_bucket",
+            "cloudflare_r2_access_key_id",
+            "cloudflare_r2_secret_access_key",
+        )
+    )
     return {
         "project_id": clean_cat,
         "owner_email": owner_email,
@@ -255,4 +265,5 @@ def get_project_storage_info(category: str) -> Dict[str, str]:
         "r2_project_prefix": prefix,
         "r2_images_prefix": f"{prefix}/images",
         "r2_labels_prefix": f"{prefix}/labels",
+        "r2_configured": r2_configured,
     }

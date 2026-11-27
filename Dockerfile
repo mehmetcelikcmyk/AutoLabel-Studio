@@ -37,8 +37,12 @@ RUN python -c "from ultralytics.utils.downloads import attempt_download_asset; a
 RUN mkdir -p exports static
 
 # Never run the web process as root. Give appuser a writable home and temp Ultralytics config dir.
+# Limit glibc malloc arenas and OMP threads to avoid >300 MB fragmentation in 1 GB RAM containers.
 ENV HOME=/home/appuser \
-    YOLO_CONFIG_DIR=/tmp/Ultralytics
+    YOLO_CONFIG_DIR=/tmp/Ultralytics \
+    MALLOC_ARENA_MAX=2 \
+    OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1
 RUN useradd --system --create-home --uid 10001 appuser && \
     mkdir -p /home/appuser/.cache /tmp/Ultralytics && \
     chown -R appuser:appuser /app /home/appuser /tmp/Ultralytics
