@@ -15,7 +15,15 @@ from PIL import Image
 
 from core.config import ROOT_DIR
 from core.security import check_project_permission
-from core.database import cf_r2_upload, cf_r2_generate_presigned_get_url
+from core.database import (
+    cf_d1_query,
+    cf_d1_load_batches,
+    cf_r2_list_objects,
+    cf_r2_get_object,
+    cf_r2_upload,
+    cf_r2_generate_presigned_get_url,
+)
+from api.shared.utils import get_project_storage_info
 from services.image_processing import load_image_rgb, save_image_preview
 
 router = APIRouter(tags=["Dataset Export"])
@@ -49,6 +57,14 @@ def load_project_config() -> Dict[str, Any]:
     return {"projects": {}, "classes": DEFAULT_CLASS_MAPPING}
 
 def resolve_cls_list(category: str, config: Dict) -> List[Dict]:
+    try:
+        rows = cf_d1_query("SELECT classes_json FROM projects WHERE id = ? LIMIT 1", [category])
+        if rows and rows[0].get("classes_json"):
+            parsed = json.loads(rows[0]["classes_json"])
+            if isinstance(parsed, list) and parsed:
+                return parsed
+    except Exception:
+        pass
     classes_map = config.get("classes", DEFAULT_CLASS_MAPPING)
     cat_key = category.lower()
     cls_raw = classes_map.get(cat_key)
@@ -59,36 +75,87 @@ def resolve_cls_list(category: str, config: Dict) -> List[Dict]:
     return [{"id": 0, "name": category.capitalize(), "prompts": [cat_key]}]
 
 
-@router.post("/api/projects/export-zip")
-@router.post("/api/projects/export-yolo")
-def export_dataset_zip(req: ExportZipRequest, authorization: Optional[str] = Header(None)):
-    """Split dataset into Train/Val/Test splits, generate data.yaml, and package into a ZIP file."""
-    cat = req.category
-    check_project_permission(cat, authorization, require_edit=False)
+def _prepare_export_pairs(cat: str, batch_id: Optional[str] = None):
+    """
+    Ensure labeled (.txt) and matching image files are synced from Cloudflare R2 to local disk
+    so exports work reliably even after Railway ephemeral disk restarts.
+    Returns (pairs, batch_img_set, batch_name_clean, cat_dir, labels_dir).
+    """
     cat_dir = ROOT_DIR / cat
     labels_dir = ROOT_DIR / f"{cat}_labeled" / "labels"
-    
-    if not cat_dir.exists() or not labels_dir.exists():
-        raise HTTPException(status_code=404, detail="Kategori veya etiket klasörü bulunamadı.")
+    cat_dir.mkdir(parents=True, exist_ok=True)
+    labels_dir.mkdir(parents=True, exist_ok=True)
+
+    valid_extensions = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
     batch_img_set = None
     batch_name_clean = None
-    if req.batch_id:
+    if batch_id:
+        b_list = []
         batches_path = ROOT_DIR / f"{cat}_labeled" / "batches.json"
         if batches_path.exists():
             try:
                 b_list = json.loads(batches_path.read_text(encoding="utf-8"))
-                for b in b_list:
-                    if b.get("id") == req.batch_id:
-                        batch_img_set = set(b.get("images") or [])
-                        batch_name_clean = re.sub(r'[^a-zA-Z0-9_\-]', '_', (b.get("name") or req.batch_id).strip())
-                        break
             except Exception:
-                pass
+                b_list = []
+        if not b_list:
+            try:
+                b_list = cf_d1_load_batches(cat) or []
+            except Exception:
+                b_list = []
+        for b in b_list:
+            if b.get("id") == batch_id:
+                batch_img_set = set(b.get("images") or [])
+                batch_name_clean = re.sub(r'[^a-zA-Z0-9_\-]', '_', (b.get("name") or batch_id).strip())
+                break
 
-    valid_extensions = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+    # Cloudflare R2 üzerinde bulunan etiket ve görselleri yerel diske tamamla
+    r2_img_by_stem: Dict[str, tuple] = {}
+    r2_img_by_name: Dict[str, str] = {}
+    try:
+        storage = get_project_storage_info(cat)
+        r2_lbls = cf_r2_list_objects(prefix=storage["r2_labels_prefix"] + "/", limit=2500)
+        non_empty_lbls = [obj for obj in r2_lbls if obj.get("size", 0) > 0 and obj.get("key", "").endswith(".txt")]
+
+        if non_empty_lbls or batch_img_set:
+            r2_imgs = cf_r2_list_objects(prefix=storage["r2_images_prefix"] + "/", limit=2500)
+            if not r2_imgs:
+                r2_imgs = cf_r2_list_objects(prefix=cat + "/", limit=2500)
+            for iobj in r2_imgs:
+                ikey = iobj.get("key", "")
+                ifn = os.path.basename(ikey)
+                iext = os.path.splitext(ifn)[1].lower()
+                if iext in valid_extensions:
+                    istem = os.path.splitext(ifn)[0]
+                    r2_img_by_stem[istem] = (ikey, ifn)
+                    r2_img_by_name[ifn] = ikey
+
+        for lobj in non_empty_lbls:
+            lkey = lobj.get("key", "")
+            lfn = os.path.basename(lkey)
+            lstem = os.path.splitext(lfn)[0]
+
+            if batch_img_set is not None:
+                matched_img_tuple = r2_img_by_stem.get(lstem)
+                if matched_img_tuple and matched_img_tuple[1] not in batch_img_set:
+                    continue
+
+            local_lbl = labels_dir / lfn
+            if not local_lbl.exists() or local_lbl.stat().st_size == 0:
+                lbytes = cf_r2_get_object(lkey)
+                if lbytes:
+                    local_lbl.write_bytes(lbytes)
+
+            has_local_img = any((cat_dir / f"{lstem}{ext}").exists() for ext in valid_extensions)
+            if not has_local_img and lstem in r2_img_by_stem:
+                ikey, ifn = r2_img_by_stem[lstem]
+                ibytes = cf_r2_get_object(ikey)
+                if ibytes:
+                    (cat_dir / ifn).write_bytes(ibytes)
+    except Exception as r2_err:
+        print(f"[Export R2 Sync Warning] {cat}: {r2_err}")
+
     pairs = []
-    
     for txt_file in labels_dir.glob("*.txt"):
         if txt_file.stat().st_size > 0:
             stem = txt_file.stem
@@ -102,6 +169,28 @@ def export_dataset_zip(req: ExportZipRequest, authorization: Optional[str] = Hea
                 if batch_img_set is not None and found_img.name not in batch_img_set:
                     continue
                 pairs.append((found_img, txt_file))
+
+    if len(pairs) == 0 and batch_img_set:
+        for fn in batch_img_set:
+            lp = cat_dir / fn
+            if not lp.exists() and fn in r2_img_by_name:
+                try:
+                    ibytes = cf_r2_get_object(r2_img_by_name[fn])
+                    if ibytes:
+                        lp.write_bytes(ibytes)
+                except Exception:
+                    pass
+
+    return pairs, batch_img_set, batch_name_clean, cat_dir, labels_dir
+
+
+@router.post("/api/projects/export-zip")
+@router.post("/api/projects/export-yolo")
+def export_dataset_zip(req: ExportZipRequest, authorization: Optional[str] = Header(None)):
+    """Split dataset into Train/Val/Test splits, generate data.yaml, and package into a ZIP file."""
+    cat = req.category
+    check_project_permission(cat, authorization, require_edit=False)
+    pairs, batch_img_set, batch_name_clean, cat_dir, labels_dir = _prepare_export_pairs(cat, req.batch_id)
 
     if len(pairs) == 0:
         if batch_img_set:
@@ -251,24 +340,10 @@ def export_coco_json(req: ExportZipRequest, authorization: Optional[str] = Heade
     """Veri setini COCO JSON formatında dışa aktarır."""
     cat = req.category
     check_project_permission(cat, authorization, require_edit=False)
-    cat_dir = ROOT_DIR / cat
-    labels_dir = ROOT_DIR / f"{cat}_labeled" / "labels"
-    if not cat_dir.exists() or not labels_dir.exists():
-        raise HTTPException(status_code=404, detail="Proje veya etiket klasörü bulunamadı.")
+    pairs, _, _, cat_dir, labels_dir = _prepare_export_pairs(cat, req.batch_id)
 
     config = load_project_config()
     cls_list = resolve_cls_list(cat, config)
-
-    valid_ext = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
-    pairs = []
-    for txt in labels_dir.glob("*.txt"):
-        if txt.stat().st_size > 0:
-            stem = txt.stem
-            for ext in valid_ext:
-                cand = cat_dir / f"{stem}{ext}"
-                if cand.exists():
-                    pairs.append((cand, txt))
-                    break
 
     if not pairs:
         raise HTTPException(status_code=400, detail="Dışa aktarılacak etiketli görsel bulunamadı.")
@@ -410,26 +485,11 @@ def export_pascal_voc(req: ExportZipRequest, authorization: Optional[str] = Head
     """Veri setini Pascal VOC XML formatında dışa aktarır."""
     cat = req.category
     check_project_permission(cat, authorization, require_edit=False)
-    cat_dir = ROOT_DIR / cat
-    labels_dir = ROOT_DIR / f"{cat}_labeled" / "labels"
-    if not cat_dir.exists() or not labels_dir.exists():
-        raise HTTPException(status_code=404, detail="Proje veya etiket klasörü bulunamadı.")
+    pairs, _, _, cat_dir, labels_dir = _prepare_export_pairs(cat, req.batch_id)
 
     config = load_project_config()
     cls_list = resolve_cls_list(cat, config)
     cls_names = {c["id"]: c["name"] for c in cls_list}
-
-    valid_ext = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
-    pairs = []
-    for txt_f in labels_dir.glob("*.txt"):
-        if txt_f.stat().st_size == 0:
-            continue
-        stem = txt_f.stem
-        for ext in valid_ext:
-            cand = cat_dir / f"{stem}{ext}"
-            if cand.exists():
-                pairs.append((cand, txt_f))
-                break
 
     if not pairs:
         raise HTTPException(status_code=400, detail="Dışa aktarılacak etiketli görsel bulunamadı.")
@@ -531,7 +591,16 @@ def export_pascal_voc(req: ExportZipRequest, authorization: Optional[str] = Head
 def download_zip_file(filename: str):
     """Downloads an exported dataset zip file securely."""
     safe_name = os.path.basename(filename)
-    zip_path = ROOT_DIR / "exports" / safe_name
+    exports_dir = ROOT_DIR / "exports"
+    exports_dir.mkdir(parents=True, exist_ok=True)
+    zip_path = exports_dir / safe_name
+    if not zip_path.exists():
+        try:
+            r2_bytes = cf_r2_get_object(f"exports/{safe_name}")
+            if r2_bytes:
+                zip_path.write_bytes(r2_bytes)
+        except Exception:
+            pass
     if not zip_path.exists():
         raise HTTPException(status_code=404, detail="İndirilecek ZIP dosyası bulunamadı.")
     return FileResponse(str(zip_path), filename=safe_name, media_type="application/zip")

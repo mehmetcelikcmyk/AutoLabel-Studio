@@ -1468,24 +1468,10 @@ class AugmentedExportRequest(BaseModel):
 
 @router.post("/api/projects/export-augmented")
 def export_augmented_dataset(req: AugmentedExportRequest, authorization: Optional[str] = Header(None)):
+    from api.dataset_export import _prepare_export_pairs
     check_project_permission(req.category, authorization, require_edit=False)
     cat = req.category
-    cat_dir = ROOT_DIR / cat
-    labels_dir = ROOT_DIR / f"{cat}_labeled" / "labels"
-    if not cat_dir.exists() or not labels_dir.exists():
-        raise HTTPException(status_code=404, detail="Proje veya etiket klasörü bulunamadı.")
-
-    valid_ext = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
-    pairs = []
-    for txt_f in labels_dir.glob("*.txt"):
-        if txt_f.stat().st_size == 0:
-            continue
-        stem = txt_f.stem
-        for ext in valid_ext:
-            cand = cat_dir / f"{stem}{ext}"
-            if cand.exists():
-                pairs.append((cand, txt_f))
-                break
+    pairs, _, _, cat_dir, labels_dir = _prepare_export_pairs(cat)
 
     if not pairs:
         raise HTTPException(status_code=400, detail="Dışa aktarılacak etiketli görsel bulunamadı.")
@@ -1552,8 +1538,9 @@ def export_augmented_dataset(req: AugmentedExportRequest, authorization: Optiona
                 new_lbl_path.write_text("".join(lines), encoding="utf-8")
                 generated += 1
 
+    from api.dataset_export import resolve_cls_list
     config = load_project_config()
-    cls_list = config.get("classes", {}).get(cat.lower(), [])
+    cls_list = resolve_cls_list(cat, config)
     names_yaml = "\n".join([f"  {c.get('id',i)}: {c.get('name',f'Class_{i}')}" for i, c in enumerate(cls_list)])
     yaml_content = f"path: {cat}_aug_dataset\ntrain: images/train\nval: images/val\n\nnames:\n{names_yaml}\n"
     (export_dir / "data.yaml").write_text(yaml_content, encoding="utf-8")
@@ -1597,9 +1584,10 @@ async def model_test(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Görsel açılamadı: {e}")
 
+    from api.dataset_export import resolve_cls_list
     img_h, img_w = img_rgb.shape[:2]
     config = load_project_config()
-    cls_list = config.get("classes", {}).get(category.lower(), [])
+    cls_list = resolve_cls_list(category, config)
     class_names = [c["name"] for c in sorted(cls_list, key=lambda x: x["id"])]
     class_colors = {c["name"]: c.get("color", "#3b82f6") for c in cls_list}
 
