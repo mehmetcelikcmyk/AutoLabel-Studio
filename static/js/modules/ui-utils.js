@@ -492,10 +492,11 @@ maximizeLoading() {
 
   try {
     const projClasses = this.getProjectClasses();
+    const maxPerCls = projClasses.length >= 12 ? 2 : 4;
     const allPrompts = [];
     projClasses.forEach(c => {
       if (c.prompts && Array.isArray(c.prompts)) {
-        c.prompts.forEach(p => { if (p && !allPrompts.includes(p)) allPrompts.push(p); });
+        c.prompts.slice(0, maxPerCls).forEach(p => { if (p && !allPrompts.includes(p)) allPrompts.push(p); });
       } else if (c.name) {
         allPrompts.push(c.name.toLowerCase());
       }
@@ -520,7 +521,7 @@ maximizeLoading() {
         body: JSON.stringify({
           category: this.currentCategory,
           image_filename: this.currentImage.filename,
-          conf_threshold: 0.08,
+          conf_threshold: 0.16,
           model_key: projModelKey,
           prompts: allPrompts.length > 0 ? allPrompts : null
         })
@@ -1260,8 +1261,10 @@ renderLoupe(pt) {
       const wantPolygon = (this.mode === 'polygon') || (!isDetectionProject && this.mode === 'smart-segment');
       const isPolygon = wantPolygon && data.polygon_points && Array.isArray(data.polygon_points) && data.polygon_points.length >= 3;
 
-      const resolvedClassId = (data.box.class_id !== undefined && data.box.class_id !== null) ? data.box.class_id : (this.activeClassId || 0);
-      const resolvedClassName = data.box.class_name || this.getClassName(resolvedClassId);
+      const resolvedClassId = (this.activeClassId !== undefined && this.activeClassId !== null)
+        ? this.activeClassId
+        : ((data.box.class_id !== undefined && data.box.class_id !== null) ? data.box.class_id : 0);
+      const resolvedClassName = this.getClassName(resolvedClassId) || data.box.class_name || `Sınıf ${resolvedClassId}`;
 
       const newAnnotation = {
         type: isPolygon ? 'polygon' : 'box',
@@ -1273,11 +1276,6 @@ renderLoupe(pt) {
         class_id: resolvedClassId,
         class_name: resolvedClassName
       };
-
-      if (this.activeClassSelect && resolvedClassId !== undefined && resolvedClassId !== null) {
-        this.activeClassId = resolvedClassId;
-        this.activeClassSelect.value = resolvedClassId;
-      }
 
       this.boxes.push(newAnnotation);
       const newBox = this.boxes[this.boxes.length - 1];

@@ -164,15 +164,22 @@ def _segment_by_click_cv(img_rgb: np.ndarray, px: int, py: int):
         lcy = py - ry1
 
         corners = np.vstack([
-            roi[0:3, :].reshape(-1, 3),
-            roi[-3:, :].reshape(-1, 3),
-            roi[:, 0:3].reshape(-1, 3),
-            roi[:, -3:].reshape(-1, 3)
+            roi[0:4, :].reshape(-1, 3),
+            roi[-4:, :].reshape(-1, 3),
+            roi[:, 0:4].reshape(-1, 3),
+            roi[:, -4:].reshape(-1, 3)
         ])
         bg_color = np.median(corners, axis=0)
 
-        diff = np.linalg.norm(roi.astype(np.float32) - bg_color.astype(np.float32), axis=2)
-        thresh = (diff > 24.0).astype(np.uint8) * 255
+        p1x, p2x = max(0, lcx - 3), min(roi_w, lcx + 4)
+        p1y, p2y = max(0, lcy - 3), min(roi_h, lcy + 4)
+        fg_patch = roi[p1y:p2y, p1x:p2x].reshape(-1, 3)
+        fg_color = np.median(fg_patch, axis=0) if fg_patch.size > 0 else roi[lcy, lcx].astype(np.float32)
+
+        diff_bg = np.linalg.norm(roi.astype(np.float32) - bg_color.astype(np.float32), axis=2)
+        diff_fg = np.linalg.norm(roi.astype(np.float32) - fg_color.astype(np.float32), axis=2)
+        fg_vs_bg = np.linalg.norm(fg_color.astype(np.float32) - bg_color.astype(np.float32))
+        thresh = ((diff_bg > 22.0) | ((fg_vs_bg > 25.0) & (diff_fg < diff_bg))).astype(np.uint8) * 255
 
         k_open = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         clean = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, k_open, iterations=1)
@@ -182,17 +189,17 @@ def _segment_by_click_cv(img_rgb: np.ndarray, px: int, py: int):
 
         try:
             mask = np.zeros((roi_h, roi_w), np.uint8)
-            mask[clean == 0] = cv2.GC_BGD
+            mask[clean == 0] = cv2.GC_PR_BGD
             mask[clean > 0] = cv2.GC_PR_FGD
-            cv2.circle(mask, (lcx, lcy), max(4, int(min(roi_h, roi_w) * 0.05)), cv2.GC_FGD, -1)
-            mask[0:2, :] = cv2.GC_BGD
-            mask[roi_h-2:roi_h, :] = cv2.GC_BGD
-            mask[:, 0:2] = cv2.GC_BGD
-            mask[:, roi_w-2:roi_w] = cv2.GC_BGD
+            cv2.circle(mask, (lcx, lcy), max(5, int(min(roi_h, roi_w) * 0.04)), cv2.GC_FGD, -1)
+            mask[0:3, :] = cv2.GC_BGD
+            mask[roi_h-3:roi_h, :] = cv2.GC_BGD
+            mask[:, 0:3] = cv2.GC_BGD
+            mask[:, roi_w-3:roi_w] = cv2.GC_BGD
 
             bgdModel = np.zeros((1, 65), np.float64)
             fgdModel = np.zeros((1, 65), np.float64)
-            cv2.grabCut(roi, mask, None, bgdModel, fgdModel, 2, cv2.GC_INIT_WITH_MASK)
+            cv2.grabCut(roi, mask, None, bgdModel, fgdModel, 3, cv2.GC_INIT_WITH_MASK)
             refined_mask = np.where((mask == cv2.GC_FGD) | (mask == cv2.GC_PR_FGD), 255, 0).astype('uint8')
         except Exception:
             refined_mask = clean
@@ -202,19 +209,21 @@ def _segment_by_click_cv(img_rgb: np.ndarray, px: int, py: int):
 
         contours, _ = cv2.findContours(refined_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
+        min_area = max(400.0, float(w_img * h_img) * 0.002)
+        max_area = float(w_img * h_img) * 0.85
         best_cnt = None
+        best_dist = -1e9
         for cnt in contours:
-            if cv2.contourArea(cnt) < 1200:
+            area = cv2.contourArea(cnt)
+            if area < min_area or area > max_area:
                 continue
-            dist = cv2.pointPolygonTest(cnt, (lcx, lcy), False)
+            dist = cv2.pointPolygonTest(cnt, (lcx, lcy), True)
             if dist >= 0:
                 best_cnt = cnt
                 break
-
-        if best_cnt is None and contours:
-            valid_cnts = [c for c in contours if cv2.contourArea(c) >= 1200]
-            if valid_cnts:
-                best_cnt = max(valid_cnts, key=cv2.contourArea)
+            if dist >= -18.0 and dist > best_dist:
+                best_dist = dist
+                best_cnt = cnt
 
         if best_cnt is not None:
             arc = cv2.arcLength(best_cnt, True)
@@ -268,50 +277,59 @@ def smart_segment_click(req: SmartSegmentRequest, authorization: Optional[str] =
     assigned_class_id = req.class_id if (req.class_id is not None) else 0
 
     config = load_project_config()
+    proj_meta = config.get("projects", {}).get(req.category, {})
+    model_key = proj_meta.get("model_key", "yolov8s-worldv2")
     cls_list = _resolve_cls_list(req.category, config)
     all_prompts, prompt_to_class = _build_prompt_map(cls_list)
 
-    # Önce tıklanan pikseldeki nesnenin gerçek sınıfını YOLOWorld ile tespit et
+    # Tıklanan noktadaki nesne için öncelikle kullanıcının seçtiği sınıfın promptlarını dene
+    selected_cls_prompts = []
+    for c in cls_list:
+        if c.get("id") == assigned_class_id:
+            selected_cls_prompts = [p.strip().lower() for p in (c.get("prompts") or [c.get("name", "").lower()]) if p.strip()]
+            break
+
+    # Önce tıklanan pikseldeki nesne kutusunu YOLOWorld ile tespit et
     detected_class_id = assigned_class_id
-    detected_class_name = None
+    detected_class_name = next((c.get("name") for c in cls_list if c.get("id") == assigned_class_id), None)
     yolo_best_xyxy = None
 
     try:
+        search_prompts = selected_cls_prompts[:4] if selected_cls_prompts else all_prompts
         with _MODEL_LOCK:
-            model, _ = get_ai_model("yolov8s-worldv2")
-            if all_prompts:
-                set_classes_if_changed(model, all_prompts)
+            model, _ = get_ai_model(model_key)
+            if search_prompts:
+                set_classes_if_changed(model, search_prompts)
 
-            res = run_model_predict(model, img_rgb, conf=0.05, imgsz=640, verbose=False)[0]
+            res = run_model_predict(model, img_rgb, conf=0.10, imgsz=640, verbose=False)[0]
+            if (not res.boxes or len(res.boxes) == 0) and selected_cls_prompts and all_prompts:
+                set_classes_if_changed(model, all_prompts)
+                search_prompts = all_prompts
+                res = run_model_predict(model, img_rgb, conf=0.12, imgsz=640, verbose=False)[0]
+
         if res.boxes and len(res.boxes) > 0:
             matching = []
             for box in res.boxes:
                 xyxy = box.xyxy[0].cpu().numpy()
                 bx1, by1, bx2, by2 = float(xyxy[0]), float(xyxy[1]), float(xyxy[2]), float(xyxy[3])
-                cls_idx = int(box.cls[0].cpu().numpy()) if box.cls is not None else 0
                 b_conf = float(box.conf[0].cpu().numpy()) if box.conf is not None else 0.0
-                c_id = assigned_class_id
-                c_name = None
-                if cls_idx < len(all_prompts):
-                    p_name = all_prompts[cls_idx]
-                    matched_tuple = prompt_to_class.get(p_name) or prompt_to_class.get(p_name.lower().strip())
-                    if matched_tuple:
-                        c_id, c_name = matched_tuple
 
-                pad_x = max(15.0, (bx2 - bx1) * 0.12)
-                pad_y = max(15.0, (by2 - by1) * 0.12)
+                pad_x = max(8.0, (bx2 - bx1) * 0.06)
+                pad_y = max(8.0, (by2 - by1) * 0.06)
                 if (bx1 - pad_x) <= px <= (bx2 + pad_x) and (by1 - pad_y) <= py <= (by2 + pad_y):
-                    area = (bx2 - bx1) * (by2 - by1)
+                    area = max(1.0, (bx2 - bx1) * (by2 - by1))
+                    if area > (w_img * h_img * 0.90):
+                        continue
                     bcx = (bx1 + bx2) / 2.0
                     bcy = (by1 + by2) / 2.0
-                    dist = ((bcx - px) ** 2 + (bcy - py) ** 2) ** 0.5
-                    matching.append((area, dist, -b_conf, (bx1, by1, bx2, by2), c_id, c_name))
+                    diag = ((bx2 - bx1) ** 2 + (by2 - by1) ** 2) ** 0.5
+                    norm_dist = (((bcx - px) ** 2 + (bcy - py) ** 2) ** 0.5) / max(diag, 1.0)
+                    score = norm_dist - (b_conf * 0.65)
+                    matching.append((score, area, (bx1, by1, bx2, by2)))
 
             if matching:
-                # En yüksek güven ve en yakın kutuyu seç
-                matching.sort(key=lambda m: (m[2], m[0]))
-                _, _, _, best_xyxy, detected_class_id, detected_class_name = matching[0]
-                yolo_best_xyxy = best_xyxy
+                matching.sort(key=lambda m: (m[0], m[1]))
+                yolo_best_xyxy = matching[0][2]
     except Exception as e:
         logger.warning(f"Smart segment YOLOWorld siniflandirma hatasi: {e}")
 

@@ -106,10 +106,11 @@ def cleanup_old_batch_jobs():
 def _build_prompt_map(cls_list: List[Dict]) -> tuple:
     all_prompts: List[str] = []
     prompt_to_class: Dict[str, tuple] = {}
+    max_per_class = 2 if len(cls_list) >= 12 else 4
     for cls in cls_list:
         c_id = cls.get("id", 0)
         c_name = cls.get("name", "object")
-        c_prompts = cls.get("prompts") or [c_name.lower()]
+        c_prompts = (cls.get("prompts") or [c_name.lower()])[:max_per_class]
         for p in c_prompts:
             p_clean = p.strip().lower()
             if p_clean and p_clean not in all_prompts:
@@ -188,9 +189,18 @@ def auto_label_image(req: AutoLabelRequest, authorization: Optional[str] = Heade
             confs = results.boxes.conf.cpu().numpy()
             cls_indices = results.boxes.cls.cpu().numpy().astype(int)
 
+            fallback_cls = (cls_list[0].get("id", 0), cls_list[0].get("name", req.category.capitalize()))
+            mapped_ids = np.array([
+                (prompt_to_class.get(all_prompts[p_idx]) or prompt_to_class.get(all_prompts[p_idx].lower().strip(), fallback_cls))[0]
+                if p_idx < len(all_prompts) else fallback_cls[0]
+                for p_idx in cls_indices
+            ], dtype=int)
+
             kept_idx = filter_boxes(xyxyn, confs, cls_indices,
                                     iou_thresh=iou_thresh, min_area=0.0004,
-                                    max_aspect=12.0, sigma_soft=0.5)
+                                    max_aspect=12.0, sigma_soft=0.5,
+                                    mapped_cls_ids=mapped_ids,
+                                    cross_class_iou_thresh=0.62)
 
             for i in kept_idx:
                 x1, y1, x2, y2 = xyxyn[i]
@@ -466,9 +476,20 @@ def _run_batch_auto_label_thread(
                         confs_b = results.boxes.conf.cpu().numpy()
                         cls_idx_b = results.boxes.cls.cpu().numpy().astype(int)
 
+                        fallback_cls = (cls_list_snap[0].get("id", 0), cls_list_snap[0].get("name", category.capitalize()))
+                        mapped_ids_b = None
+                        if hasattr(model, 'set_classes'):
+                            mapped_ids_b = np.array([
+                                (prompt_to_class.get(all_prompts[pi]) or prompt_to_class.get(all_prompts[pi].lower().strip(), fallback_cls))[0]
+                                if pi < len(all_prompts) else fallback_cls[0]
+                                for pi in cls_idx_b
+                            ], dtype=int)
+
                         kept_idx = filter_boxes(xyxyn, confs_b, cls_idx_b,
                                                 iou_thresh=iou_thresh, min_area=0.0004,
-                                                max_aspect=12.0, sigma_soft=0.5)
+                                                max_aspect=12.0, sigma_soft=0.5,
+                                                mapped_cls_ids=mapped_ids_b,
+                                                cross_class_iou_thresh=0.62)
 
                         for ki in kept_idx:
                             x1, y1, x2, y2 = xyxyn[ki]

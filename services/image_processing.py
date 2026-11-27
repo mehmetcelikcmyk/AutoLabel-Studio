@@ -118,8 +118,10 @@ def filter_boxes(
     min_area: float = 0.0001,
     max_aspect: float = 15.0,
     sigma_soft: float = 0.5,
+    mapped_cls_ids: Optional[np.ndarray] = None,
+    cross_class_iou_thresh: float = 0.65,
 ) -> List[int]:
-    """Tam filtreleme boru hattı: boyutsal denetim + Soft-NMS."""
+    """Tam filtreleme boru hattı: boyutsal denetim + sınıf içi Soft-NMS + sınıflar arası tekrar baskılama."""
     N = len(confs)
     if N == 0:
         return []
@@ -147,24 +149,50 @@ def filter_boxes(
 
     sub_boxes = boxes_xyxyn[valid]
     sub_confs = confs[valid]
-    sub_cls = cls_indices[valid]
+    group_cls = mapped_cls_ids[valid] if mapped_cls_ids is not None else cls_indices[valid]
 
     kept_indices = []
-    for c in np.unique(sub_cls):
-        mask = (sub_cls == c)
+    for c in np.unique(group_cls):
+        mask = (group_cls == c)
         c_orig = np.array(valid)[mask]
         c_boxes = sub_boxes[mask]
         c_confs = sub_confs[mask]
 
         if len(c_boxes) == 1:
-            kept_indices.append(c_orig[0])
+            kept_indices.append(int(c_orig[0]))
             continue
 
         nms_kept = soft_nms(c_boxes, c_confs, sigma=sigma_soft, score_threshold=0.05)
         for idx in nms_kept:
-            kept_indices.append(c_orig[idx])
+            kept_indices.append(int(c_orig[idx]))
 
-    return sorted(kept_indices)
+    if len(kept_indices) <= 1 or cross_class_iou_thresh <= 0.0:
+        return sorted(kept_indices)
+
+    # Sınıflar arası aynı kutuya basılan çakışan tahminleri ele (en yüksek güvenli kazanır)
+    kept_sorted = sorted(kept_indices, key=lambda idx: float(confs[idx]), reverse=True)
+    final_kept: List[int] = []
+    for idx in kept_sorted:
+        bx1, by1, bx2, by2 = boxes_xyxyn[idx]
+        b_area = max(1e-9, (bx2 - bx1) * (by2 - by1))
+        duplicate = False
+        for k_idx in final_kept:
+            kx1, ky1, kx2, ky2 = boxes_xyxyn[k_idx]
+            ix1 = max(bx1, kx1)
+            iy1 = max(by1, ky1)
+            ix2 = min(bx2, kx2)
+            iy2 = min(by2, ky2)
+            if ix2 > ix1 and iy2 > iy1:
+                inter = (ix2 - ix1) * (iy2 - iy1)
+                k_area = max(1e-9, (kx2 - kx1) * (ky2 - ky1))
+                iou = inter / max(1e-9, b_area + k_area - inter)
+                if iou >= cross_class_iou_thresh:
+                    duplicate = True
+                    break
+        if not duplicate:
+            final_kept.append(idx)
+
+    return sorted(final_kept)
 
 def optimize_uploaded_image(raw_bytes: bytes, max_dim: int = 1920, quality: int = 90) -> Tuple[bytes, str]:
     """
