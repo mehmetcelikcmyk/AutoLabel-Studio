@@ -509,23 +509,35 @@ maximizeLoading() {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch('/api/auto-label-image', {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify({
-        category: this.currentCategory,
-        image_filename: this.currentImage.filename,
-        conf_threshold: 0.08,
-        model_key: projModelKey,
-        prompts: allPrompts.length > 0 ? allPrompts : null
-      })
-    });
+    const fetchController = new AbortController();
+    const fetchTimeout = setTimeout(() => fetchController.abort(), 90000);
+    let res;
+    try {
+      res = await fetch('/api/auto-label-image', {
+        method: 'POST',
+        headers: headers,
+        signal: fetchController.signal,
+        body: JSON.stringify({
+          category: this.currentCategory,
+          image_filename: this.currentImage.filename,
+          conf_threshold: 0.08,
+          model_key: projModelKey,
+          prompts: allPrompts.length > 0 ? allPrompts : null
+        })
+      });
+    } finally {
+      clearTimeout(fetchTimeout);
+    }
 
     let data;
     try {
       data = await res.json();
     } catch (parseErr) {
-      data = { detail: `Sunucu yanıtı okunamadı (HTTP ${res.status})` };
+      if (res.status === 502 || res.status === 504) {
+        data = { detail: `AI sunucusu yanıt vermedi (HTTP ${res.status}). Model hazırlanıyor olabilir, lütfen tekrar deneyin.` };
+      } else {
+        data = { detail: `Sunucu yanıtı okunamadı (HTTP ${res.status})` };
+      }
     }
     this.showLoading(false);
     this.isAiProcessing = false;
@@ -543,13 +555,16 @@ maximizeLoading() {
         this.showToast('Görselde seçili sınıfa uygun nesne bulunamadı.', 'info');
       }
     } else {
-      this.showToast(data.detail || 'Yapay zeka nesne tespit edemedi.', 'warning');
+      this.showToast(data.detail || 'Yapay zeka nesne tespit edemedi.', res.ok ? 'warning' : 'error');
     }
   } catch (e) {
     this.showLoading(false);
     this.isAiProcessing = false;
     console.error('Auto label error:', e);
-    this.showToast(e.message || 'Yapay zeka işlemi sırasında bir hata oluştu.', 'error');
+    const msg = e.name === 'AbortError'
+      ? 'AI isteği zaman aşımına uğradı. Lütfen tekrar deneyin.'
+      : (e.message || 'Yapay zeka işlemi sırasında bir hata oluştu.');
+    this.showToast(msg, 'error');
   }
 }
 

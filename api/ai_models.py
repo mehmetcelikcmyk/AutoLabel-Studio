@@ -81,28 +81,77 @@ DEFAULT_MODEL_KEY = "yolov8s-worldv2"
 CUSTOM_MODELS_DIR = ROOT_DIR / "custom_models"
 CUSTOM_MODELS_FILE = CUSTOM_MODELS_DIR / "models_meta.json"
 
-_MODEL_LOCK = threading.Lock()
+_MODEL_LOCK = threading.RLock()
 _MODEL_CACHE: Dict[str, Any] = {}
 _ACTIVE_DEVICE: str = "cpu"
 _LAST_CLASSES: List[str] = []
+_MODEL_LAST_CLASSES: Dict[int, List[str]] = {}
+_TEXT_EMBED_CACHE: Dict[str, Any] = {}
+_TEXT_EMBED_CACHE_MAX = 1000
 _CLIP_TEXT_ENCODER: Any = None
 _CLIP_TEXT_WEIGHTS_PATH = ROOT_DIR / "clip_vitb32_text_fp16.pt"
 
 
+def _get_container_mem_limit_mb() -> float:
+    """Detect Linux container memory limit (cgroup v2/v1) in MB, or 0.0 if unlimited/unknown."""
+    for cg_path in ("/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes"):
+        try:
+            with open(cg_path, "r", encoding="utf-8") as f:
+                raw = f.read().strip()
+            if raw and raw != "max":
+                val = int(raw)
+                if 0 < val < (1 << 50):
+                    return val / (1024.0 * 1024.0)
+        except Exception:
+            pass
+    return 0.0
+
+
+def _resolve_safe_model_key(model_key: Optional[str], allow_heavy_fallback: bool = True) -> str:
+    """Resolve requested model key and guard against OOM on 1 GB RAM containers."""
+    resolved = model_key or DEFAULT_MODEL_KEY
+    mem_mb = _get_container_mem_limit_mb()
+    if 0 < mem_mb <= 1400.0 and resolved in ("yolov8x-worldv2", "yolov8l-worldv2"):
+        if not allow_heavy_fallback:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Sunucu bellek limiti ({int(mem_mb)} MB) nedeniyle '{resolved}' yüklenemiyor. yolov8s-worldv2 veya yolov8m-worldv2 seçin.",
+            )
+        logger.warning(f"Low-RAM container ({mem_mb:.0f} MB): downgrading '{resolved}' to 'yolov8m-worldv2' to avoid OOM.")
+        return "yolov8m-worldv2"
+    return resolved
+
+
+def _quick_gelu(t):
+    import torch
+    return t * torch.sigmoid(1.702 * t)
+
+
 def _encode_classes_lightweight(classes: List[str], device: str = "cpu"):
     """
-    Encode text prompts for YOLO-World using ONLY the CLIP text transformer (126 MB FP16),
-    completely skipping the 350 MB CLIP vision backbone and TorchScript JIT duplication
-    that otherwise causes 1.4 GB RAM spikes and Linux OOM kills on Railway CPU containers.
+    Encode text prompts for YOLO-World using streaming FP16->FP32 functional CLIP text forward
+    plus an LRU prompt embedding cache (~2 MB total). Keeps peak RAM ~550 MB instead of 900+ MB
+    and avoids repeat encoding overhead on subsequent requests.
     """
-    global _CLIP_TEXT_ENCODER
     import gc
     import torch
+    import torch.nn.functional as F
     import clip
-    from torch import nn
-    from clip.model import Transformer, LayerNorm
 
-    if _CLIP_TEXT_ENCODER is None:
+    if "cpu" in str(device):
+        try:
+            torch.set_num_threads(min(2, os.cpu_count() or 2))
+        except Exception:
+            pass
+
+    missing: List[str] = []
+    seen_missing = set()
+    for c in classes:
+        if c not in _TEXT_EMBED_CACHE and c not in seen_missing:
+            missing.append(c)
+            seen_missing.add(c)
+
+    if missing:
         if not _CLIP_TEXT_WEIGHTS_PATH.exists():
             url = clip.clip._MODELS["ViT-B/32"]
             mp = clip.clip._download(url, os.path.expanduser("~/.cache/clip"))
@@ -121,41 +170,74 @@ def _encode_classes_lightweight(classes: List[str], device: str = "cpu"):
         else:
             sd_half = torch.load(str(_CLIP_TEXT_WEIGHTS_PATH), map_location="cpu", weights_only=True)
 
-        mask = torch.empty(77, 77)
-        mask.fill_(float("-inf"))
-        mask.triu_(1)
-        mod = nn.Module()
-        mod.transformer = Transformer(width=512, layers=12, heads=8, attn_mask=mask)
-        mod.token_embedding = nn.Embedding(49408, 512)
-        mod.ln_final = LayerNorm(512)
-        mod.positional_embedding = nn.Parameter(torch.empty(77, 512))
-        mod.text_projection = nn.Parameter(torch.empty(512, 512))
-        mod.load_state_dict({k: v.float() for k, v in sd_half.items()})
-        del sd_half
-        mod.eval()
-        _CLIP_TEXT_ENCODER = mod
+        attn_mask = torch.empty(77, 77, dtype=torch.float32)
+        attn_mask.fill_(float("-inf"))
+        attn_mask.triu_(1)
+
+        tokens = clip.tokenize(missing, truncate=True)
+        with torch.inference_mode():
+            pos_emb = sd_half["positional_embedding"].float()
+            tok_emb_w = sd_half["token_embedding.weight"].float()
+            ln_final_w = sd_half["ln_final.weight"].float()
+            ln_final_b = sd_half["ln_final.bias"].float()
+            proj_w = sd_half["text_projection"].float()
+
+            for start_i in range(0, len(missing), 64):
+                chunk_names = missing[start_i:start_i + 64]
+                tok_chunk = tokens[start_i:start_i + 64]
+
+                x = F.embedding(tok_chunk, tok_emb_w) + pos_emb
+                x = x.permute(1, 0, 2)  # (77, B, 512)
+
+                for i in range(12):
+                    p = f"transformer.resblocks.{i}."
+                    ln1_x = F.layer_norm(x, (512,), sd_half[p + "ln_1.weight"].float(), sd_half[p + "ln_1.bias"].float(), eps=1e-5)
+                    attn_out, _ = F.multi_head_attention_forward(
+                        ln1_x,
+                        ln1_x,
+                        ln1_x,
+                        embed_dim_to_check=512,
+                        num_heads=8,
+                        in_proj_weight=sd_half[p + "attn.in_proj_weight"].float(),
+                        in_proj_bias=sd_half[p + "attn.in_proj_bias"].float(),
+                        bias_k=None,
+                        bias_v=None,
+                        add_zero_attn=False,
+                        dropout_p=0.0,
+                        out_proj_weight=sd_half[p + "attn.out_proj.weight"].float(),
+                        out_proj_bias=sd_half[p + "attn.out_proj.bias"].float(),
+                        training=False,
+                        key_padding_mask=None,
+                        need_weights=False,
+                        attn_mask=attn_mask,
+                    )
+                    x = x + attn_out
+
+                    ln2_x = F.layer_norm(x, (512,), sd_half[p + "ln_2.weight"].float(), sd_half[p + "ln_2.bias"].float(), eps=1e-5)
+                    m = F.linear(ln2_x, sd_half[p + "mlp.c_fc.weight"].float(), sd_half[p + "mlp.c_fc.bias"].float())
+                    m = _quick_gelu(m)
+                    m = F.linear(m, sd_half[p + "mlp.c_proj.weight"].float(), sd_half[p + "mlp.c_proj.bias"].float())
+                    x = x + m
+
+                x = x.permute(1, 0, 2)  # (B, 77, 512)
+                x = F.layer_norm(x, (512,), ln_final_w, ln_final_b, eps=1e-5)
+                x = x[torch.arange(x.shape[0]), tok_chunk.argmax(dim=-1)] @ proj_w
+                x = x / x.norm(p=2, dim=-1, keepdim=True)
+
+                for row_i, cname in enumerate(chunk_names):
+                    if len(_TEXT_EMBED_CACHE) >= _TEXT_EMBED_CACHE_MAX:
+                        try:
+                            oldest_key = next(iter(_TEXT_EMBED_CACHE))
+                            _TEXT_EMBED_CACHE.pop(oldest_key, None)
+                        except StopIteration:
+                            break
+                    _TEXT_EMBED_CACHE[cname] = x[row_i].detach().cpu().clone()
+
+        del sd_half, attn_mask, tokens
         gc.collect()
 
-    mod = _CLIP_TEXT_ENCODER
-    tokens = clip.tokenize(classes, truncate=True)
-    with torch.no_grad():
-        feats_list = []
-        for tok_chunk in tokens.split(80):
-            x = mod.token_embedding(tok_chunk) + mod.positional_embedding
-            x = mod.transformer(x.permute(1, 0, 2)).permute(1, 0, 2)
-            x = mod.ln_final(x)
-            x = x[torch.arange(x.shape[0]), tok_chunk.argmax(dim=-1)] @ mod.text_projection
-            x = x / x.norm(p=2, dim=-1, keepdim=True)
-            feats_list.append(x)
-        txt_feats = feats_list[0] if len(feats_list) == 1 else torch.cat(feats_list, dim=0)
-        txt_feats = txt_feats.reshape(-1, len(classes), txt_feats.shape[-1]).to(device)
-
-    # Bellek kısıtlı CPU sunucularda kodlama biter bitmez metin modelini de serbest bırak
-    if "cuda" not in str(device):
-        _CLIP_TEXT_ENCODER = None
-        gc.collect()
-
-    return txt_feats
+    stacked = __import__("torch").stack([_TEXT_EMBED_CACHE[c] for c in classes], dim=0).unsqueeze(0).to(device)
+    return stacked
 
 def detect_device() -> str:
     """Auto-detect best available compute device (CUDA > MPS > CPU)."""
@@ -191,21 +273,31 @@ def get_custom_model_info(model_key: str) -> Optional[Dict[str, Any]]:
     customs = load_custom_models()
     return customs.get(model_key)
 
-def get_ai_model(model_key: Optional[str] = None, device: Optional[str] = None):
+def get_ai_model(model_key: Optional[str] = None, device: Optional[str] = None, allow_heavy_fallback: bool = True):
     """
-    Thread-safe model loader with cache.
+    Thread-safe model loader with single-model eviction on CPU / low-RAM containers.
     Returns (model, model_key) tuple.
     """
     global _ACTIVE_DEVICE, _LAST_CLASSES
+    import gc
+
     if device is None:
         device = _ACTIVE_DEVICE
-    if model_key is None:
-        model_key = DEFAULT_MODEL_KEY
+    model_key = _resolve_safe_model_key(model_key, allow_heavy_fallback=allow_heavy_fallback)
 
     cache_key = f"{model_key}::{device}"
     with _MODEL_LOCK:
         if cache_key in _MODEL_CACHE:
             return _MODEL_CACHE[cache_key], model_key
+
+        # Keep at most 1 model resident on CPU / <=2 GB RAM containers to prevent OOM kills
+        mem_mb = _get_container_mem_limit_mb()
+        if "cpu" in str(device) or (0 < mem_mb <= 2048.0):
+            if _MODEL_CACHE:
+                _MODEL_CACHE.clear()
+                _MODEL_LAST_CLASSES.clear()
+                _LAST_CLASSES = []
+                gc.collect()
 
         custom_info = get_custom_model_info(model_key)
         if custom_info:
@@ -234,14 +326,17 @@ def get_ai_model(model_key: Optional[str] = None, device: Optional[str] = None):
         model_path = ROOT_DIR / info["filename"]
         try:
             from ultralytics import YOLOWorld, YOLO
+            from ultralytics.utils.downloads import attempt_download_asset
+            if not model_path.exists():
+                try:
+                    attempt_download_asset(str(model_path))
+                except Exception:
+                    pass
+            load_target = str(model_path) if model_path.exists() else info["filename"]
             if info["type"] == "world":
-                if not model_path.exists():
-                    YOLOWorld(info["filename"])
-                model = YOLOWorld(str(model_path))
+                model = YOLOWorld(load_target)
             else:
-                if not model_path.exists():
-                    YOLO(info["filename"])
-                model = YOLO(str(model_path))
+                model = YOLO(load_target)
 
             try:
                 model.to(device)
@@ -250,6 +345,7 @@ def get_ai_model(model_key: Optional[str] = None, device: Optional[str] = None):
 
             _MODEL_CACHE[cache_key] = model
             _LAST_CLASSES = []
+            gc.collect()
             return model, model_key
         except Exception as ex:
             logger.error(f"Error loading model {model_key}: {ex}")
@@ -257,27 +353,44 @@ def get_ai_model(model_key: Optional[str] = None, device: Optional[str] = None):
 
 
 def set_classes_if_changed(model, classes: List[str]):
-    """Only call set_classes when class list actually changed (uses lightweight text-only CLIP on CPU)."""
+    """Only re-encode prompts when class list changed for this model; uses streaming lightweight CLIP."""
     global _LAST_CLASSES
     if not classes:
         return
     with _MODEL_LOCK:
-        if classes != _LAST_CLASSES:
-            try:
-                inner = getattr(model, "model", None)
-                if inner is not None and hasattr(inner, "model"):
-                    device = next(inner.model.parameters()).device
-                    inner.txt_feats = _encode_classes_lightweight(classes, device=device)
-                    inner.model[-1].nc = len(classes)
-                    model.names = {i: c for i, c in enumerate(classes)}
-                    if hasattr(inner, "names"):
-                        inner.names = model.names
-                    _LAST_CLASSES = list(classes)
-                elif hasattr(model, "set_classes"):
-                    model.set_classes(classes)
-                    _LAST_CLASSES = list(classes)
-            except Exception as e:
-                logger.warning(f"set_classes warning: {e}")
+        m_id = id(model)
+        if _MODEL_LAST_CLASSES.get(m_id) == classes:
+            inner = getattr(model, "model", None)
+            if inner is not None and getattr(inner, "txt_feats", None) is not None:
+                return
+        try:
+            inner = getattr(model, "model", None)
+            if hasattr(model, "set_classes") and inner is not None and hasattr(inner, "model"):
+                device = next(inner.model.parameters()).device
+                inner.txt_feats = _encode_classes_lightweight(classes, device=device)
+                inner.model[-1].nc = len(classes)
+                names_dict = {i: c for i, c in enumerate(classes)}
+                if hasattr(inner, "names"):
+                    inner.names = names_dict
+                predictor = getattr(model, "predictor", None)
+                if predictor is not None and getattr(predictor, "model", None) is not None:
+                    predictor.model.names = names_dict
+                _MODEL_LAST_CLASSES[m_id] = list(classes)
+                _LAST_CLASSES = list(classes)
+            elif hasattr(model, "set_classes"):
+                model.set_classes(classes)
+                _MODEL_LAST_CLASSES[m_id] = list(classes)
+                _LAST_CLASSES = list(classes)
+        except Exception as e:
+            logger.warning(f"set_classes warning: {e}")
+
+
+def run_model_predict(model, *args, **kwargs):
+    """Thread-safe model.predict wrapper using torch.inference_mode() under _MODEL_LOCK."""
+    import torch
+    with _MODEL_LOCK:
+        with torch.inference_mode():
+            return model.predict(*args, **kwargs)
 
 
 
@@ -457,8 +570,9 @@ async def test_model_predict(
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
     try:
-        model, _ = get_ai_model(model_key)
-        res = model.predict(img_rgb, conf=conf, verbose=False)[0]
+        with _MODEL_LOCK:
+            model, _ = get_ai_model(model_key)
+            res = run_model_predict(model, img_rgb, conf=conf, verbose=False)[0]
 
         boxes_out = []
         annotated = img_bgr.copy()
@@ -524,8 +638,9 @@ async def run_inference_api(
     h_img, w_img = img_rgb.shape[:2]
 
     try:
-        model, used_key = get_ai_model(model_key)
-        res = model.predict(img_rgb, conf=conf, verbose=False)[0]
+        with _MODEL_LOCK:
+            model, used_key = get_ai_model(model_key)
+            res = run_model_predict(model, img_rgb, conf=conf, verbose=False)[0]
 
         predictions = []
         if res.boxes is not None and len(res.boxes) > 0:

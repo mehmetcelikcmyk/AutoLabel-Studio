@@ -334,8 +334,10 @@ def admin_preload_model(req: Dict[str, str], authorization: Optional[str] = Head
     require_admin(authorization)
     model_key = req.get("model_key", "yolov8s-worldv2")
     try:
-        model, actual_key = get_ai_model(model_key, _ACTIVE_DEVICE)
+        model, actual_key = get_ai_model(model_key, _ACTIVE_DEVICE, allow_heavy_fallback=False)
         return {"status": "ok", "message": f"'{actual_key}' modeli başarıyla RAM önbelleğine yüklendi."}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Model yüklenirken hata: {str(e)}")
 
@@ -1609,10 +1611,14 @@ async def model_test(
     class_colors = {c["name"]: c.get("color", "#3b82f6") for c in cls_list}
 
     try:
-        model, used_key = get_ai_model(model_key or "yolov8s-worldv2")
-        if hasattr(model, "set_classes") and class_names:
-            model.set_classes(class_names)
-        results = model.predict(img_rgb, conf=max(0.05, min(0.95, conf)), verbose=False)
+        from api.ai_models import set_classes_if_changed, run_model_predict, _MODEL_LOCK
+        with _MODEL_LOCK:
+            model, used_key = get_ai_model(model_key or "yolov8s-worldv2")
+            if class_names:
+                set_classes_if_changed(model, class_names)
+            results = run_model_predict(model, img_rgb, conf=max(0.05, min(0.95, conf)), verbose=False)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Model çalıştırılamadı: {e}")
 

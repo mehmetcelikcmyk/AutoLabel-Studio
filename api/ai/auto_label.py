@@ -8,6 +8,7 @@ AI Otomatik etiketleme ve toplu iş parçacığı (batch auto-label) modülü:
 """
 
 import os
+import gc
 import time
 import json
 import threading
@@ -21,7 +22,7 @@ from fastapi import APIRouter, HTTPException, Query, Header
 from core.config import ROOT_DIR
 from core.database import cf_r2_get_object
 from core.security import get_current_user, check_project_permission
-from api.ai_models import get_ai_model, set_classes_if_changed, _ACTIVE_DEVICE
+from api.ai_models import get_ai_model, set_classes_if_changed, run_model_predict, _MODEL_LOCK, _ACTIVE_DEVICE
 from api.shared.models import AutoLabelRequest, BatchAutoLabelRequest
 from api.shared.utils import load_project_config, get_project_storage_info
 from services.image_processing import load_image_rgb, save_image_preview, safe_bbox, filter_boxes
@@ -48,14 +49,20 @@ def _load_image_with_r2_fallback(category: str, filename: str) -> Optional[np.nd
         if img is not None:
             return img
 
+    cache_dir = Path(tempfile.gettempdir()) / "als_cache" / category
+    cache_path = cache_dir / filename
+    if cache_path.exists():
+        img = load_image_rgb(cache_path)
+        if img is not None:
+            return img
+
     try:
         storage = get_project_storage_info(category)
-        r2_key = f"{storage['r2_images_prefix']}/{filename}"
-        img_bytes = cf_r2_get_object(r2_key)
+        img_bytes = cf_r2_get_object(f"{storage['r2_images_prefix']}/{filename}")
+        if not img_bytes:
+            img_bytes = cf_r2_get_object(f"{category}/{filename}")
         if img_bytes:
-            cache_dir = Path(tempfile.gettempdir()) / "als_cache" / category
             cache_dir.mkdir(parents=True, exist_ok=True)
-            cache_path = cache_dir / filename
             cache_path.write_bytes(img_bytes)
             img = load_image_rgb(cache_path)
             if img is not None:
@@ -156,10 +163,10 @@ def auto_label_image(req: AutoLabelRequest, authorization: Optional[str] = Heade
         h_img, w_img = img.shape[:2]
         imgsz = _get_imgsz(h_img, w_img)
 
-        model, used_key = get_ai_model(model_key)
-        set_classes_if_changed(model, all_prompts)
-
-        results = model.predict(img, conf=conf_thresh, imgsz=imgsz, verbose=False)[0]
+        with _MODEL_LOCK:
+            model, used_key = get_ai_model(model_key)
+            set_classes_if_changed(model, all_prompts)
+            results = run_model_predict(model, img, conf=conf_thresh, imgsz=imgsz, verbose=False)[0]
         if results.boxes is not None and len(results.boxes) > 0:
             xyxyn = results.boxes.xyxyn.cpu().numpy().copy()
             confs = results.boxes.conf.cpu().numpy()
@@ -202,6 +209,8 @@ def auto_label_image(req: AutoLabelRequest, authorization: Optional[str] = Heade
             "detected_count": len(boxes),
             "boxes": boxes
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI etiketleme hatası: {str(e)}")
 
@@ -228,111 +237,136 @@ def _run_batch_auto_label_thread(
     error_log = ROOT_DIR / f"{category}_labeled" / "batch_errors.log"
     batch_key = _make_batch_key(batch_user_id, category)
 
-    config = load_project_config()
-    proj_meta = config.get("projects", {}).get(category, {})
-    ai_settings = proj_meta.get("ai_settings", {})
-    if model_key is None:
-        model_key = proj_meta.get("model_key", "yolov8s-worldv2")
-
-    cls_list = _resolve_cls_list(category, config)
-    if prompts and len(prompts) > 0:
-        all_prompts = [p.strip().lower() for p in prompts if p.strip()]
-        _, auto_map = _build_prompt_map(cls_list)
-        prompt_to_class: Dict[str, tuple] = {}
-        for p in all_prompts:
-            if p in auto_map:
-                prompt_to_class[p] = auto_map[p]
-            else:
-                prompt_to_class[p] = (cls_list[0].get("id", 0), cls_list[0].get("name", category.capitalize()))
-    else:
-        all_prompts, prompt_to_class = _build_prompt_map(cls_list)
-
-    if not all_prompts:
-        all_prompts = [category.lower()]
-        prompt_to_class[category.lower()] = (0, category.capitalize())
-
-    iou_thresh = float(ai_settings.get("iou", 0.50))
-    valid_extensions = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
-    cat_dir.mkdir(parents=True, exist_ok=True)
-    # Railway gibi geçici diskli ortamlarda eksik görselleri Cloudflare R2'den indir
-    storage_info = None
-    try:
-        from core.database import cf_r2_list_objects, cf_r2_get_object
-        from api.shared.utils import get_project_storage_info
-        storage_info = get_project_storage_info(category)
-        if storage_info.get("r2_configured"):
-            r2_objs = cf_r2_list_objects(prefix=storage_info["r2_images_prefix"] + "/", limit=2500)
-            for obj in r2_objs:
-                fn = os.path.basename(obj.get("key", ""))
-                if os.path.splitext(fn)[1].lower() in valid_extensions:
-                    lp = cat_dir / fn
-                    if not lp.exists():
-                        raw_b = cf_r2_get_object(obj["key"])
-                        if raw_b:
-                            lp.write_bytes(raw_b)
-    except Exception as r2_sync_err:
-        print(f"[Batch Auto-Label R2 Sync Warning] {r2_sync_err}")
-
-    all_files = sorted([f for f in os.listdir(cat_dir) if os.path.splitext(f)[1].lower() in valid_extensions]) if cat_dir.exists() else []
-
-    if target_filenames:
-        target_set = set(target_filenames)
-        all_files = [f for f in all_files if f in target_set]
-    elif batch_id:
-        batches_file = ROOT_DIR / f"{category}_labeled" / "batches.json"
-        if batches_file.exists():
-            try:
-                with open(batches_file, "r", encoding="utf-8") as bf:
-                    b_list = json.load(bf)
-                for b in b_list:
-                    if b.get("id") == batch_id:
-                        target_set = set(b.get("images", []))
-                        all_files = [f for f in all_files if f in target_set]
-                        break
-            except Exception:
-                pass
-
-    if empty_only:
-        img_files = [f for f in all_files
-                     if not (labels_dir / f"{os.path.splitext(f)[0]}.txt").exists()
-                     or (labels_dir / f"{os.path.splitext(f)[0]}.txt").stat().st_size == 0]
-    elif not overwrite:
-        img_files = [f for f in all_files
-                     if not (labels_dir / f"{os.path.splitext(f)[0]}.txt").exists()
-                     or (labels_dir / f"{os.path.splitext(f)[0]}.txt").stat().st_size == 0]
-    else:
-        img_files = all_files
-
-    _create_labels_snapshot(category, note="before_batch_label")
-
-    BATCH_JOBS[batch_key] = {
-        "status": "running",
-        "category": category,
-        "user_id": batch_user_id or "anon",
-        "current": 0,
-        "total": len(img_files),
-        "newly_labeled": 0,
-        "skipped": len(all_files) - len(img_files),
-        "errors": 0,
-        "stop_requested": False,
-        "start_time": time.time(),
-        "eta_seconds": None,
-        "speed_img_per_sec": None,
-        "model_key": model_key,
-        "device": _ACTIVE_DEVICE,
-    }
-
     error_lines = []
     try:
-        model, used_key = get_ai_model(model_key)
-        set_classes_if_changed(model, all_prompts)
+        config = load_project_config()
+        proj_meta = config.get("projects", {}).get(category, {})
+        ai_settings = proj_meta.get("ai_settings", {})
+        if model_key is None:
+            model_key = proj_meta.get("model_key", "yolov8s-worldv2")
+
+        cls_list = _resolve_cls_list(category, config)
+        if prompts and len(prompts) > 0:
+            all_prompts = [p.strip().lower() for p in prompts if p.strip()]
+            _, auto_map = _build_prompt_map(cls_list)
+            prompt_to_class: Dict[str, tuple] = {}
+            for p in all_prompts:
+                if p in auto_map:
+                    prompt_to_class[p] = auto_map[p]
+                else:
+                    prompt_to_class[p] = (cls_list[0].get("id", 0), cls_list[0].get("name", category.capitalize()))
+        else:
+            all_prompts, prompt_to_class = _build_prompt_map(cls_list)
+
+        if not all_prompts:
+            all_prompts = [category.lower()]
+            prompt_to_class[category.lower()] = (0, category.capitalize())
+
+        iou_thresh = float(ai_settings.get("iou", 0.50))
+        valid_extensions = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+        cat_dir.mkdir(parents=True, exist_ok=True)
+
+        # Metadata-only discovery (disk + R2) without eager full-dataset downloads
+        file_names_set = set()
+        if cat_dir.exists():
+            for fname in os.listdir(cat_dir):
+                if os.path.splitext(fname)[1].lower() in valid_extensions:
+                    file_names_set.add(fname)
+
+        existing_label_stems = set()
+        if labels_dir.exists():
+            for lp in labels_dir.iterdir():
+                if lp.suffix == ".txt" and lp.stat().st_size > 0:
+                    existing_label_stems.add(lp.stem)
+
+        storage_info = None
+        try:
+            from core.database import cf_r2_list_objects
+            from api.shared.utils import get_project_storage_info
+            storage_info = get_project_storage_info(category)
+            if storage_info.get("r2_configured"):
+                r2_objs = cf_r2_list_objects(prefix=storage_info["r2_images_prefix"] + "/", limit=2500)
+                if not r2_objs:
+                    r2_objs = cf_r2_list_objects(prefix=category + "/", limit=2500)
+                for obj in r2_objs:
+                    fn = os.path.basename(obj.get("key", ""))
+                    if os.path.splitext(fn)[1].lower() in valid_extensions:
+                        file_names_set.add(fn)
+                if empty_only or not overwrite:
+                    r2_lbls = cf_r2_list_objects(prefix=storage_info["r2_labels_prefix"] + "/", limit=2500)
+                    for lobj in r2_lbls:
+                        if lobj.get("size", 0) > 0:
+                            existing_label_stems.add(os.path.splitext(os.path.basename(lobj.get("key", "")))[0])
+        except Exception as r2_sync_err:
+            print(f"[Batch Auto-Label R2 List Warning] {r2_sync_err}")
+
+        all_files = sorted(file_names_set)
+
+        if target_filenames:
+            target_set = set(target_filenames)
+            all_files = [f for f in all_files if f in target_set]
+        elif batch_id:
+            b_list = []
+            batches_file = ROOT_DIR / f"{category}_labeled" / "batches.json"
+            if batches_file.exists():
+                try:
+                    with open(batches_file, "r", encoding="utf-8") as bf:
+                        b_list = json.load(bf)
+                except Exception:
+                    b_list = []
+            if not b_list:
+                try:
+                    from core.database import cf_d1_load_batches
+                    b_list = cf_d1_load_batches(category) or []
+                except Exception:
+                    b_list = []
+            for b in b_list:
+                if b.get("id") == batch_id:
+                    target_set = set(b.get("images", []))
+                    all_files = [f for f in all_files if f in target_set]
+                    break
+
+        if empty_only or not overwrite:
+            img_files = [f for f in all_files if os.path.splitext(f)[0] not in existing_label_stems]
+        else:
+            img_files = all_files
+
+        _create_labels_snapshot(category, note="before_batch_label")
+
+        if batch_key not in BATCH_JOBS:
+            BATCH_JOBS[batch_key] = {
+                "status": "running",
+                "category": category,
+                "user_id": batch_user_id or "anon",
+                "start_time": time.time(),
+            }
+        BATCH_JOBS[batch_key].update({
+            "status": "running",
+            "status_message": "Yapay zeka modeli hazırlanıyor...",
+            "current": 0,
+            "total": len(img_files),
+            "newly_labeled": 0,
+            "skipped": len(all_files) - len(img_files),
+            "errors": 0,
+            "stop_requested": False,
+            "eta_seconds": None,
+            "speed_img_per_sec": None,
+            "model_key": model_key,
+            "device": _ACTIVE_DEVICE,
+        })
+
+        with _MODEL_LOCK:
+            model, used_key = get_ai_model(model_key)
+            set_classes_if_changed(model, all_prompts)
         BATCH_JOBS[batch_key]["model_key"] = used_key
+        BATCH_JOBS[batch_key]["status_message"] = "Etiketleme işleniyor..."
 
         model2 = None
-        if model_key_2:
+        if model_key_2 and "cpu" not in str(_ACTIVE_DEVICE):
             try:
-                model2, _ = get_ai_model(model_key_2)
-                set_classes_if_changed(model2, all_prompts)
+                with _MODEL_LOCK:
+                    model2, _ = get_ai_model(model_key_2)
+                    set_classes_if_changed(model2, all_prompts)
                 BATCH_JOBS[batch_key]["ensemble"] = True
             except Exception:
                 pass
@@ -386,12 +420,16 @@ def _run_batch_auto_label_thread(
                 max_w = max(im.shape[1] for im in valid_imgs)
                 imgsz = _get_imgsz(max_h, max_w)
 
-                batch_results = model.predict(valid_imgs, conf=conf_threshold, imgsz=imgsz, verbose=False, batch=len(valid_imgs))
+                with _MODEL_LOCK:
+                    set_classes_if_changed(model, all_prompts)
+                    batch_results = run_model_predict(model, valid_imgs, conf=conf_threshold, imgsz=imgsz, verbose=False, batch=len(valid_imgs))
 
                 batch_results_2 = None
                 if model2 is not None:
                     try:
-                        batch_results_2 = model2.predict(valid_imgs, conf=conf_threshold, imgsz=imgsz, verbose=False, batch=len(valid_imgs))
+                        with _MODEL_LOCK:
+                            set_classes_if_changed(model2, all_prompts)
+                            batch_results_2 = run_model_predict(model2, valid_imgs, conf=conf_threshold, imgsz=imgsz, verbose=False, batch=len(valid_imgs))
                     except Exception:
                         pass
 
@@ -486,6 +524,9 @@ def _run_batch_auto_label_thread(
 
             processed_count += len(chunk_fnames)
             BATCH_JOBS[batch_key]["current"] = processed_count
+            del valid_imgs
+            if "cpu" in str(_ACTIVE_DEVICE) and processed_count % 10 == 0:
+                gc.collect()
 
             elapsed = time.time() - t_start
             if elapsed > 0 and processed_count > 0:
@@ -518,6 +559,24 @@ def start_batch_auto_label(req: BatchAutoLabelRequest, authorization: Optional[s
     job = BATCH_JOBS.get(batch_key)
     if job and job.get("status") == "running":
         return {"status": "already_running", "job": job}
+
+    BATCH_JOBS[batch_key] = {
+        "status": "running",
+        "status_message": "Görseller taranıyor ve model hazırlanıyor...",
+        "category": req.category,
+        "user_id": user_id or "anon",
+        "current": 0,
+        "total": 0,
+        "newly_labeled": 0,
+        "skipped": 0,
+        "errors": 0,
+        "stop_requested": False,
+        "start_time": time.time(),
+        "eta_seconds": None,
+        "speed_img_per_sec": None,
+        "model_key": req.model_key,
+        "device": _ACTIVE_DEVICE,
+    }
 
     thread = threading.Thread(
         target=_run_batch_auto_label_thread,

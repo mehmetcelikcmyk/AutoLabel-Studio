@@ -13,7 +13,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, Header
 
 from core.security import check_project_permission
-from api.ai_models import get_ai_model, set_classes_if_changed
+from api.ai_models import get_ai_model, set_classes_if_changed, run_model_predict, _MODEL_LOCK
 from api.ai.auto_label import (
     _load_image_with_r2_fallback,
     _resolve_cls_list,
@@ -48,8 +48,9 @@ def refine_bounding_box(req: RefineBoundingBoxRequest, authorization: Optional[s
         by2 = int((b.y_center + b.height / 2.0) * h_img)
 
         try:
-            model, _ = get_ai_model("yolov8s-worldv2")
-            yres = model.predict(img_rgb, conf=0.10, verbose=False)[0]
+            with _MODEL_LOCK:
+                model, _ = get_ai_model("yolov8s-worldv2")
+                yres = run_model_predict(model, img_rgb, conf=0.10, verbose=False)[0]
             best_yolo_match = None
             max_area = 0.0
             for yb in yres.boxes:
@@ -276,11 +277,12 @@ def smart_segment_click(req: SmartSegmentRequest, authorization: Optional[str] =
     yolo_best_xyxy = None
 
     try:
-        model, _ = get_ai_model("yolov8s-worldv2")
-        if all_prompts:
-            set_classes_if_changed(model, all_prompts)
+        with _MODEL_LOCK:
+            model, _ = get_ai_model("yolov8s-worldv2")
+            if all_prompts:
+                set_classes_if_changed(model, all_prompts)
 
-        res = model.predict(img_rgb, conf=0.05, imgsz=640, verbose=False)[0]
+            res = run_model_predict(model, img_rgb, conf=0.05, imgsz=640, verbose=False)[0]
         if res.boxes and len(res.boxes) > 0:
             matching = []
             for box in res.boxes:

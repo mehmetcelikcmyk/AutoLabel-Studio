@@ -30,6 +30,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy source code and assets
 COPY . .
 
+# Pre-download default lightweight YOLO weights so cold start never spikes RAM or delays first prediction
+RUN python -c "from ultralytics.utils.downloads import attempt_download_asset; attempt_download_asset('/app/yolov8s-worldv2.pt'); attempt_download_asset('/app/yolov8n.pt')"
+
 # Ensure storage directories exist
 RUN mkdir -p exports static
 

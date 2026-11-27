@@ -1636,18 +1636,18 @@ pollBatchStatus() {
         if (pBar) pBar.style.width = `${pct}%`;
         if (pPct) pPct.textContent = `%${pct}`;
         if (pCount) {
-          pCount.textContent = total > 0 ? `${current.toLocaleString()} / ${total.toLocaleString()} Resim İşlendi` : 'Taranıyor ve hazırlanıyor...';
+          pCount.textContent = total > 0 ? `${current.toLocaleString()} / ${total.toLocaleString()} Resim İşlendi` : (data.status_message || 'Taranıyor ve hazırlanıyor...');
         }
         if (pRemaining) pRemaining.textContent = `Kalan: ${remaining.toLocaleString()} resim`;
         if (pNew) pNew.textContent = `+${newly.toLocaleString()} yeni etiketlendi`;
         if (pTitle) pTitle.textContent = 'Yapay zeka nesneleri tespit ediyor...';
         if (pSub) pSub.textContent = 'Lütfen bekleyiniz.';
-        if (pDetail) pDetail.textContent = data.eta_str ? `Kalan Süre: ~${data.eta_str} • İşlem devam ediyor` : 'İşlem devam ediyor';
+        if (pDetail) pDetail.textContent = data.eta_str ? `Kalan Süre: ~${data.eta_str} • İşlem devam ediyor` : (data.status_message || 'İşlem devam ediyor');
 
         // Update floating widget
         if (fwTitle) fwTitle.textContent = `${this.activeModalCategory}`;
         if (fwPct) fwPct.textContent = `%${pct}`;
-        if (fwSub) fwSub.textContent = data.eta_str ? `Kalan: ~${data.eta_str} (${current}/${total})` : `${current}/${total} işlendi`;
+        if (fwSub) fwSub.textContent = data.eta_str ? `Kalan: ~${data.eta_str} (${current}/${total})` : (current > 0 || total > 0 ? `${current}/${total} işlendi` : (data.status_message || 'Hazırlanıyor...'));
 
       } else if (data.status === 'completed') {
         const pBar = document.getElementById('batchProgressBar');
@@ -1679,8 +1679,31 @@ pollBatchStatus() {
           }
         }, 1800);
 
+      } else if (data.status === 'failed' || data.status === 'idle') {
+        const pTitle = document.getElementById('batchStatusTitle');
+        const pSub = document.getElementById('batchStatusSub');
+        const pDetail = document.getElementById('batchStatusDetail');
+        const isRestart = data.status === 'idle';
+        const errTxt = isRestart
+          ? 'Sunucu yeniden başlatıldığı için aktif iş oturumu sıfırlandı. Lütfen tekrar başlatın.'
+          : (data.error_msg || 'Sunucu tarafında beklenmeyen bir hata oluştu.');
+
+        if (pTitle) pTitle.textContent = isRestart ? 'Oturum Sıfırlandı' : 'İşlem Başarısız Oldu';
+        if (pSub) pSub.textContent = errTxt;
+        if (pDetail) pDetail.textContent = 'Durduruldu';
+
+        this.showToast(errTxt, 'error');
+        if (fw) fw.style.display = 'none';
+        clearInterval(this.batchPollTimer);
+        this.batchPollTimer = null;
+
+        const cStep = document.getElementById('batchConfigStep');
+        const pStep = document.getElementById('batchProgressStep');
+        if (cStep) cStep.style.display = 'flex';
+        if (pStep) pStep.style.display = 'none';
+
       } else {
-        // stopped veya başka bir durum
+        // stopped
         const pTitle = document.getElementById('batchStatusTitle');
         const pSub = document.getElementById('batchStatusSub');
         const pDetail = document.getElementById('batchStatusDetail');
