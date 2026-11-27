@@ -1346,6 +1346,21 @@ setupModalEvents() {
   // Back to Dashboard button in editor header — handled in setupEventListeners via openProject()
 
 
+  // Global sayfa yenileme / sekme kapatma koruma uyarısı
+  if (!this._globalBeforeUnloadInstalled) {
+    this._globalBeforeUnloadInstalled = true;
+    window.addEventListener('beforeunload', (e) => {
+      const hasActiveBatch = Boolean(this._isBatchActive || this.batchPollTimer);
+      const hasActiveSingleAi = Boolean(this.isAiProcessing);
+      const hasUnsavedCanvas = Boolean(this.isDirty);
+      if (hasActiveBatch || hasActiveSingleAi || hasUnsavedCanvas) {
+        e.preventDefault();
+        e.returnValue = 'Devam eden işlem veya kaydedilmemiş etiket değişiklikleri var. Sayfayı yenilerseniz veriler kaybolabilir.';
+        return e.returnValue;
+      }
+    });
+  }
+
   // Batch Auto-Labeling Modal
   document.getElementById('batchConfRange')?.addEventListener('input', (e) => {
     const pct = Math.round(parseFloat(e.target.value) * 100);
@@ -1478,34 +1493,23 @@ openClassConfigModal(catId) {
   this.activeModalBatchName = batchName || null;
   this.activeModalBatchFiles = batchFiles || null;
 
-  let imgCount = 0;
-  if (batchFiles && Array.isArray(batchFiles)) {
-    imgCount = batchFiles.length;
-  } else {
-    const proj = this.projects?.find(p => p.id === finalCatId);
-    imgCount = proj ? (proj.image_count || 0) : 0;
-  }
+  const openSeq = (this._batchModalOpenSeq = (this._batchModalOpenSeq || 0) + 1);
 
   const cStep = document.getElementById('batchConfigStep');
   const pStep = document.getElementById('batchProgressStep');
   const descEl = document.getElementById('batchConfigTargetDesc');
   const m = document.getElementById('batchAutoLabelModal');
+  const startBtn = document.getElementById('batchStartExecutionBtn');
 
-  // Check if job is currently running on backend
-  let isRunning = false;
-  let runningStatusData = null;
-  try {
-    const chk = await fetch(`/api/projects/batch-status?category=${encodeURIComponent(finalCatId)}`, {
-      headers: this.getAuthHeaders()
-    });
-    if (chk.ok) {
-      const cData = await chk.json();
-      if (cData && cData.status === 'running') {
-        isRunning = true;
-        runningStatusData = cData;
-      }
-    }
-  } catch (e) { }
+  if (startBtn) startBtn.disabled = Boolean(this._isStartingBatch);
+
+  // Açılış anında 0 ms tepki: bekleme yapmadan modalı hemen ekrana getir
+  const knownRunningSameCat = Boolean(
+    this._isBatchActive &&
+    this._lastBatchStatusData &&
+    this._lastBatchStatusData.status === 'running' &&
+    (!this._lastBatchStatusData.category || this._lastBatchStatusData.category === finalCatId)
+  );
 
   if (m) {
     m.style.display = 'flex';
@@ -1514,29 +1518,55 @@ openClassConfigModal(catId) {
     m.style.pointerEvents = 'auto';
   }
 
-  // Only show live progress step if there is an ACTUALLY RUNNING background job!
-  // If no job is running, ALWAYS show the Model Selection & Configuration Step!
-  if (isRunning) {
+  if (knownRunningSameCat) {
     if (cStep) cStep.style.display = 'none';
     if (pStep) pStep.style.display = 'flex';
-    if (runningStatusData) {
-      this._applyBatchProgressUI(runningStatusData);
-    }
+    this._applyBatchProgressUI(this._lastBatchStatusData);
     this.pollBatchStatus();
-  } else {
-    if (cStep) cStep.style.display = 'flex';
-    if (pStep) pStep.style.display = 'none';
-    this.loadModelHub();
-    if (descEl) {
-      descEl.textContent = batchName
-        ? `"${batchName}" yığınındaki görseller seçilen model ve ayarlarla otomatik etiketlenecektir.`
-        : `"${finalCatId}" projesindeki görseller seçilen model ve ayarlarla otomatik etiketlenecektir.`;
-    }
+    return;
   }
+
+  if (cStep) cStep.style.display = 'flex';
+  if (pStep) pStep.style.display = 'none';
+  if (descEl) {
+    descEl.textContent = batchName
+      ? `"${batchName}" yığınındaki görseller seçilen model ve ayarlarla otomatik etiketlenecektir.`
+      : `"${finalCatId}" projesindeki görseller seçilen model ve ayarlarla otomatik etiketlenecektir.`;
+  }
+  this.loadModelHub();
+
+  // Arka planda sunucuda zaten çalışan bir iş varsa canlı ilerlemeye geçir
+  try {
+    const chkController = new AbortController();
+    const chkTimeout = setTimeout(() => chkController.abort(), 8000);
+    const chk = await fetch(`/api/projects/batch-status?category=${encodeURIComponent(finalCatId)}`, {
+      headers: this.getAuthHeaders(),
+      signal: chkController.signal
+    });
+    clearTimeout(chkTimeout);
+    if (openSeq !== this._batchModalOpenSeq || this._isStartingBatch) return;
+    if (m && m.style.display === 'none') return;
+    if (chk.ok) {
+      const cData = await chk.json();
+      if (cData && cData.status === 'running') {
+        this._isBatchActive = true;
+        if (cStep) cStep.style.display = 'none';
+        if (pStep) pStep.style.display = 'flex';
+        this._applyBatchProgressUI(cData);
+        this.pollBatchStatus();
+      }
+    }
+  } catch (e) { }
 }
 
   async startBatchAutoLabel() {
-  if (!this.activeModalCategory) return;
+  if (!this.activeModalCategory || this._isStartingBatch) return;
+  this._isStartingBatch = true;
+  this._isBatchActive = true;
+  this._lastBatchStatusData = null;
+
+  const startBtn = document.getElementById('batchStartExecutionBtn');
+  if (startBtn) startBtn.disabled = true;
 
   // Read chosen options from Stage 1 Form
   const modelKey = document.getElementById('batchModelSelect')?.value || 'yolov8s-worldv2';
@@ -1585,19 +1615,31 @@ openClassConfigModal(catId) {
     });
     const data = await res.json();
     if (res.ok && (data.status === 'started' || data.status === 'already_running')) {
+      this._isBatchActive = true;
       this.pollBatchStatus();
     } else {
+      this._isBatchActive = false;
       this.showToast(data.detail || data.message || 'İşlem başlatılamadı', 'error');
       // Başlatılamazsa config adımına geri döndür
       if (cStep) cStep.style.display = 'flex';
       if (pStep) pStep.style.display = 'none';
-      if (this.batchPollTimer) clearInterval(this.batchPollTimer);
+      if (this.batchPollTimer) {
+        clearInterval(this.batchPollTimer);
+        this.batchPollTimer = null;
+      }
     }
   } catch (e) {
+    this._isBatchActive = false;
     this.showToast('Toplu etiketleme başlatılamadı: ' + (e.message || ''), 'error');
     if (cStep) cStep.style.display = 'flex';
     if (pStep) pStep.style.display = 'none';
-    if (this.batchPollTimer) clearInterval(this.batchPollTimer);
+    if (this.batchPollTimer) {
+      clearInterval(this.batchPollTimer);
+      this.batchPollTimer = null;
+    }
+  } finally {
+    this._isStartingBatch = false;
+    if (startBtn) startBtn.disabled = false;
   }
 }
 
@@ -1670,9 +1712,11 @@ pollBatchStatus() {
       const fw = document.getElementById('batchFloatingWidget');
 
       if (data.status === 'running') {
+        this._isBatchActive = true;
         this._applyBatchProgressUI(data);
 
       } else if (data.status === 'completed') {
+        this._isBatchActive = false;
         this._lastBatchStatusData = null;
         const pBar = document.getElementById('batchProgressBar');
         const pPct = document.getElementById('batchProgressPct');
@@ -1705,6 +1749,7 @@ pollBatchStatus() {
         }, 1800);
 
       } else if (data.status === 'failed' || data.status === 'idle') {
+        this._isBatchActive = false;
         this._lastBatchStatusData = null;
         const pTitle = document.getElementById('batchStatusTitle');
         const pSub = document.getElementById('batchStatusSub');
@@ -1729,6 +1774,7 @@ pollBatchStatus() {
         if (pStep) pStep.style.display = 'none';
 
       } else {
+        this._isBatchActive = false;
         this._lastBatchStatusData = null;
         // stopped
         const pTitle = document.getElementById('batchStatusTitle');
@@ -1777,8 +1823,15 @@ pollBatchStatus() {
       method: 'POST',
       headers: this.getAuthHeaders()
     });
+    this._isBatchActive = false;
+    this._lastBatchStatusData = null;
     this.showToast('Etiketleme durduruldu.', 'info');
-    if (this.batchPollTimer) clearInterval(this.batchPollTimer);
+    if (this.batchPollTimer) {
+      clearInterval(this.batchPollTimer);
+      this.batchPollTimer = null;
+    }
+    const fw = document.getElementById('batchFloatingWidget');
+    if (fw) fw.style.display = 'none';
     const cStep = document.getElementById('batchConfigStep');
     const pStep = document.getElementById('batchProgressStep');
     if (cStep) cStep.style.display = 'flex';
@@ -1796,6 +1849,7 @@ pollBatchStatus() {
     if (!res.ok) return;
     const data = await res.json();
     if (data && data.status === 'running') {
+      this._isBatchActive = true;
       this.activeModalCategory = cat;
       const fw = document.getElementById('batchFloatingWidget');
       const fwTitle = document.getElementById('floatWidgetTitle');
