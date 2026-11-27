@@ -288,7 +288,11 @@
           });
           const expData = await expRes.json();
           if (expRes.ok && expData.download_url) {
-            window.location.href = expData.download_url;
+            let dlUrl = expData.download_url;
+            if (dlUrl.startsWith('/api/') && !dlUrl.includes('token=') && token) {
+              dlUrl += (dlUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
+            }
+            window.location.href = dlUrl;
             this.showToast('Veri seti ZIP indirme işlemi başladı!', 'success');
           } else {
             throw new Error(expData.detail || 'Dışa aktarma başarısız oldu.');

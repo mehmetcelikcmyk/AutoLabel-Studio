@@ -413,12 +413,18 @@
         const info = `${data.train_count} train / ${data.val_count} val${nTest > 0 ? ` / ${nTest} test` : ''}`;
         const link = document.getElementById('downloadZipLink');
         if (link) {
-          link.href = data.download_url;
+          let dlUrl = data.download_url || data.r2_download_url || '';
+          if (dlUrl.startsWith('/api/') && !dlUrl.includes('token=')) {
+            const dlTok = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
+            if (dlTok) dlUrl += (dlUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(dlTok)}`;
+          }
+          link.href = dlUrl;
           link.setAttribute('download', `${cat}_dataset.zip`);
         }
         document.getElementById('exportResultArea').style.display = 'block';
         btn.style.display = 'none';
-        _toast(`${data.total_exported} görselli ZIP hazır (${info}, ${data.file_size_mb} MB)`, 'success');
+        const totalExported = data.total_images ?? data.total_exported ?? 0;
+        _toast(`${totalExported} görselli ZIP hazır (${info}, ${data.file_size_mb} MB)`, 'success');
       } catch (err) {
         _toast(err.message || 'ZIP oluşturulurken hata.', 'error');
         btn.disabled = false;
@@ -739,7 +745,12 @@
         const stopBtn = document.getElementById('ftStopBtn');
         if (stopBtn) stopBtn.style.display = 'none';
         if (data.download_url && dlWrap && dlLink) {
-          dlLink.href = data.download_url;
+          let ftUrl = data.download_url;
+          if (ftUrl.startsWith('/api/') && !ftUrl.includes('token=')) {
+            const dlTok = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
+            if (dlTok) ftUrl += (ftUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(dlTok)}`;
+          }
+          dlLink.href = ftUrl;
           dlWrap.style.display = 'block';
         }
         if (data.error) _toast(`Fine-tuning hatası: ${data.error}`, 'error');

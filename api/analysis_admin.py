@@ -1538,7 +1538,7 @@ def export_augmented_dataset(req: AugmentedExportRequest, authorization: Optiona
                 new_lbl_path.write_text("".join(lines), encoding="utf-8")
                 generated += 1
 
-    from api.dataset_export import resolve_cls_list
+    from api.dataset_export import resolve_cls_list, _build_authed_download_url
     config = load_project_config()
     cls_list = resolve_cls_list(cat, config)
     names_yaml = "\n".join([f"  {c.get('id',i)}: {c.get('name',f'Class_{i}')}" for i, c in enumerate(cls_list)])
@@ -1557,7 +1557,7 @@ def export_augmented_dataset(req: AugmentedExportRequest, authorization: Optiona
         "augmented_count": generated,
         "total_count": len(pairs) + generated,
         "file_size_mb": file_size_mb,
-        "download_url": f"/api/download-zip?filename={zip_filename}",
+        "download_url": _build_authed_download_url(zip_filename, authorization),
     }
 
 

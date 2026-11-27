@@ -1909,19 +1909,25 @@ openExportModal(catId) {
   try {
     const res = await fetch('/api/projects/export-zip', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ category: this.activeModalCategory, train_ratio: ratio })
     });
     const data = await res.json();
     if (data.status === 'ok') {
       const link = document.getElementById('downloadZipLink');
       if (link) {
-        link.href = data.r2_download_url || data.download_url;
+        let dlUrl = data.download_url || data.r2_download_url || '';
+        if (dlUrl.startsWith('/api/') && !dlUrl.includes('token=')) {
+          const dlTok = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
+          if (dlTok) dlUrl += (dlUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(dlTok)}`;
+        }
+        link.href = dlUrl;
         link.setAttribute('download', `${this.activeModalCategory}_dataset.zip`);
       }
       document.getElementById('exportResultArea').style.display = 'block';
       if (btn) btn.style.display = 'none';
-      this.showToast(`${data.total_exported} resimlik ZIP paketi hazır (${data.file_size_mb} MB)`, 'success');
+      const totalExported = data.total_images ?? data.total_exported ?? 0;
+      this.showToast(`${totalExported} resimlik ZIP paketi hazır (${data.file_size_mb} MB)`, 'success');
     } else {
       this.showToast(data.detail || 'Dışa aktarma başarısız', 'error');
     }

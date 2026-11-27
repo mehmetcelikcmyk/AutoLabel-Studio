@@ -1972,8 +1972,13 @@ function installTeamsModule(DatasetEditor) {
       const data = await res.json();
       if (res.ok && data.status === 'ok') {
         this.showToast(data.message, 'success');
+        let dlUrl = data.download_url;
+        if (dlUrl && dlUrl.startsWith('/api/') && !dlUrl.includes('token=')) {
+          const dlTok = localStorage.getItem('yolo_auth_token') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
+          if (dlTok) dlUrl += (dlUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(dlTok)}`;
+        }
         const a = document.createElement('a');
-        a.href = data.download_url;
+        a.href = dlUrl;
         a.download = data.pack_filename;
         document.body.appendChild(a);
         a.click();

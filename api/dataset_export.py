@@ -56,6 +56,16 @@ def load_project_config() -> Dict[str, Any]:
             pass
     return {"projects": {}, "classes": DEFAULT_CLASS_MAPPING}
 
+def _build_authed_download_url(zip_filename: str, authorization: Optional[str] = None) -> str:
+    from urllib.parse import quote
+    base_url = f"/api/download-zip?filename={quote(zip_filename)}"
+    if authorization and authorization.lower().startswith("bearer "):
+        tok = authorization[7:].strip()
+        if tok:
+            return f"{base_url}&token={quote(tok)}"
+    return base_url
+
+
 def resolve_cls_list(category: str, config: Dict) -> List[Dict]:
     try:
         rows = cf_d1_query("SELECT classes_json FROM projects WHERE id = ? LIMIT 1", [category])
@@ -210,9 +220,10 @@ def export_dataset_zip(req: ExportZipRequest, authorization: Optional[str] = Hea
                 "status": "ok",
                 "format": "Raw Images",
                 "zip_file": zip_filename,
-                "download_url": f"/api/download-zip?filename={zip_filename}",
+                "download_url": _build_authed_download_url(zip_filename, authorization),
                 "file_size_mb": file_size_mb,
                 "total_images": len(batch_img_set),
+                "total_exported": len(batch_img_set),
                 "train_count": 0,
                 "val_count": 0,
                 "test_count": 0
@@ -298,10 +309,11 @@ names:
         "status": "ok",
         "format": "YOLO TXT",
         "zip_file": zip_filename,
-        "download_url": f"/api/download-zip?filename={zip_filename}",
+        "download_url": _build_authed_download_url(zip_filename, authorization),
         "r2_download_url": r2_download_url,
         "file_size_mb": file_size_mb,
         "total_images": total,
+        "total_exported": total,
         "train_count": n_train,
         "val_count": n_val,
         "test_count": n_test,
@@ -475,7 +487,7 @@ def export_coco_json(req: ExportZipRequest, authorization: Optional[str] = Heade
         "val_count": n_val,
         "test_count": n_test,
         "file_size_mb": file_size_mb,
-        "download_url": f"/api/download-zip?filename={zip_filename}",
+        "download_url": _build_authed_download_url(zip_filename, authorization),
         "r2_download_url": r2_download_url,
     }
 
@@ -583,7 +595,7 @@ def export_pascal_voc(req: ExportZipRequest, authorization: Optional[str] = Head
         "val_count": n_val,
         "test_count": n_test,
         "file_size_mb": file_size_mb,
-        "download_url": f"/api/download-zip?filename={zip_filename}",
+        "download_url": _build_authed_download_url(zip_filename, authorization),
     }
 
 
