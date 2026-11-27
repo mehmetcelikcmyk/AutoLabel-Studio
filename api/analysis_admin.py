@@ -1245,19 +1245,12 @@ class SuggestPromptsRequest(BaseModel):
 
 @router.post("/api/suggest-prompts")
 def suggest_prompts(req: SuggestPromptsRequest):
+    from api.shared.utils import enrich_class_prompts
     query = req.class_name.strip().lower()
     existing = set(p.strip().lower() for p in (req.existing_prompts or []))
-    suggestions = []
-
-    if query in _PROMPT_VOCAB:
-        suggestions = _PROMPT_VOCAB[query]
-    else:
-        for key, prompts in _PROMPT_VOCAB.items():
-            if key in query or query in key:
-                suggestions = prompts
-                break
-        if not suggestions:
-            suggestions = [query, f"{query} object", f"a {query}", f"single {query}", f"{query} item"]
+    suggestions = _PROMPT_VOCAB.get(query)
+    if not suggestions:
+        suggestions = enrich_class_prompts(req.class_name, [])
 
     new_suggestions = [p for p in suggestions if p not in existing]
     return {

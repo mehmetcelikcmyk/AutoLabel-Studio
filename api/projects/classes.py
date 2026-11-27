@@ -9,6 +9,7 @@ from typing import Optional, Dict
 from fastapi import APIRouter, Header
 
 from core.config import ROOT_DIR
+from core.database import cf_d1_query
 from core.security import check_project_permission
 from api.shared.models import UpdateClassesRequest
 from api.shared.utils import (
@@ -16,6 +17,7 @@ from api.shared.utils import (
     load_project_config,
     save_project_config,
 )
+from api.projects.core import invalidate_categories_cache
 
 router = APIRouter(tags=["Projects Classes"])
 
@@ -48,6 +50,15 @@ def update_project_classes(req: UpdateClassesRequest, authorization: Optional[st
     if cat in config.get("projects", {}):
         config["projects"][cat]["classes"] = normalized
     save_project_config(config)
+    try:
+        import json as _json
+        cf_d1_query(
+            "UPDATE projects SET classes_json = ? WHERE id = ?",
+            [_json.dumps(normalized, ensure_ascii=False), cat]
+        )
+    except Exception:
+        pass
+    invalidate_categories_cache()
 
     remapped_count = 0
     if req.remap_labels and id_map:

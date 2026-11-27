@@ -48,6 +48,26 @@ _CATEGORIES_CACHE_TIME: float = 0.0
 _CATEGORIES_CACHE_TTL: float = 30.0
 
 
+def invalidate_categories_cache() -> None:
+    """Clear in-memory categories cache after project or class mutations."""
+    global _CATEGORIES_CACHE, _CATEGORIES_CACHE_TIME
+    _CATEGORIES_CACHE = []
+    _CATEGORIES_CACHE_TIME = 0.0
+
+
+def _merge_classes_for_response(base_classes: Dict[str, Any], projects_list: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Merge local config classes with D1-backed per-project class lists."""
+    merged = dict(base_classes or {})
+    for proj in projects_list:
+        pid = proj.get("id")
+        cls_list = proj.get("classes")
+        if pid and isinstance(cls_list, list) and cls_list:
+            merged[pid.lower()] = cls_list
+            if pid != pid.lower():
+                merged[pid] = cls_list
+    return merged
+
+
 def get_categories(force_refresh: bool = False) -> List[Dict[str, Any]]:
     """Tüm projelerin istatistik ve meta verilerini D1 ve yerel yapılandırma ile birleştirip döndürür."""
     global _CATEGORIES_CACHE, _CATEGORIES_CACHE_TIME
@@ -56,13 +76,16 @@ def get_categories(force_refresh: bool = False) -> List[Dict[str, Any]]:
         return [dict(c) for c in _CATEGORIES_CACHE]
 
     config = load_project_config()
-    classes_map = config.get("classes", DEFAULT_CLASS_MAPPING)
+    classes_map = dict(config.get("classes", DEFAULT_CLASS_MAPPING))
     projects_meta = dict(config.get("projects", {}))
     valid_extensions = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
     try:
-        d1_projects = cf_d1_query("SELECT id, display_name, description, project_type, visibility, license, created_at, owner_email, workspace_id FROM projects")
+        d1_projects = cf_d1_query(
+            "SELECT id, display_name, description, project_type, visibility, license, created_at, owner_email, workspace_id, classes_json FROM projects"
+        )
         if d1_projects:
+            import json as _json
             for p in d1_projects:
                 pid = p.get("id")
                 if pid:
@@ -83,6 +106,15 @@ def get_categories(force_refresh: bool = False) -> List[Dict[str, Any]]:
                             projects_meta[pid]["visibility"] = p["visibility"]
                         if p.get("workspace_id"):
                             projects_meta[pid]["workspace_id"] = p["workspace_id"]
+
+                    raw_cls_json = p.get("classes_json")
+                    if raw_cls_json:
+                        try:
+                            parsed_cls = _json.loads(raw_cls_json)
+                            if isinstance(parsed_cls, list) and len(parsed_cls) > 0:
+                                classes_map[pid.lower()] = parsed_cls
+                        except Exception:
+                            pass
     except Exception as e:
         print(f"[get_categories D1 sync error] {e}")
 
@@ -275,9 +307,10 @@ def get_projects(workspace_id: Optional[str] = Query(None), authorization: Optio
                 p_copy["team_captain"] = t_meta["captain"]
             filtered.append(p_copy)
 
+    merged_classes = _merge_classes_for_response(config.get("classes", DEFAULT_CLASS_MAPPING), filtered)
     return {
         "projects": filtered,
-        "classes": config.get("classes", DEFAULT_CLASS_MAPPING),
+        "classes": merged_classes,
         "workspace_id": workspace_id
     }
 
@@ -291,7 +324,8 @@ def list_categories(authorization: Optional[str] = Header(None)):
     config = load_project_config()
     all_cats = get_categories()
     visible = [c for c in all_cats if user_can_access_project(c, user_email, user_role)]
-    return {"categories": visible, "classes": config.get("classes", DEFAULT_CLASS_MAPPING)}
+    merged_classes = _merge_classes_for_response(config.get("classes", DEFAULT_CLASS_MAPPING), visible)
+    return {"categories": visible, "classes": merged_classes}
 
 
 @router.post("/api/projects/create")
@@ -433,6 +467,7 @@ def create_project(req: CreateProjectRequest, authorization: Optional[str] = Hea
     except Exception as e:
         print(f"[D1 Project Sync Warning] {e}")
 
+    invalidate_categories_cache()
     return {
         "status": "ok",
         "project_id": folder_name,
@@ -494,6 +529,7 @@ def delete_project(req: DeleteProjectRequest, authorization: Optional[str] = Hea
         invalidate_images_cache(cat_name)
     except Exception:
         pass
+    invalidate_categories_cache()
 
     return {"status": "ok", "deleted_category": cat_name, "r2_deleted_count": r2_deleted}
 
@@ -513,6 +549,7 @@ def rename_project(req: RenameProjectRequest, authorization: Optional[str] = Hea
         cf_d1_query("UPDATE projects SET display_name = ? WHERE id = ?", [new_name, req.category])
     except Exception:
         pass
+    invalidate_categories_cache()
     return {"status": "ok", "category": req.category, "new_name": new_name}
 
 
@@ -731,6 +768,7 @@ def save_project_settings(req: ProjectSettingsSaveRequest, authorization: Option
         )
     except Exception as e:
         print(f"[D1 Update Classes Warning] {e}")
+    invalidate_categories_cache()
 
     remapped_count = 0
     if req.remap_labels and id_map:

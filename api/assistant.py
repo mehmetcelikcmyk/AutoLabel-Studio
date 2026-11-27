@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from core.security import get_current_user
 from core.database import cf_d1_query
+from api.shared.utils import enrich_class_prompts
 from services.llm_assistant import query_multi_ai_chat, load_chat_history, save_chat_history
 
 router = APIRouter(tags=["AI Assistant"])
@@ -237,11 +238,12 @@ def agent_suggest(req: AgentSuggestRequest, authorization: Optional[str] = Heade
                         r, g, b = colorsys.hls_to_rgb(hue, 0.58, 0.82)
                         raw_col = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
                 used_colors.add(raw_col)
+                cname = c.get("name", f"Class_{idx}")
                 classes.append({
                     "id": idx,
-                    "name": c.get("name", f"Class_{idx}"),
+                    "name": cname,
                     "color": raw_col,
-                    "prompts": c.get("prompts", [c.get("name", "").lower()])
+                    "prompts": enrich_class_prompts(cname, c.get("prompts"))
                 })
 
             blueprint = {

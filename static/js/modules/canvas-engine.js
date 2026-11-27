@@ -21,6 +21,14 @@
     const data = await res.json();
     this.categories = data.categories || [];
     this.classes = data.classes || {};
+    this.categories.forEach(c => {
+      if (c && c.id && Array.isArray(c.classes) && c.classes.length > 0) {
+        const key = c.id.toLowerCase();
+        if (!Array.isArray(this.classes[key]) || this.classes[key].length === 0) {
+          this.classes[key] = c.classes;
+        }
+      }
+    });
 
     const pCountEl = document.getElementById('wsNavProjectsCount');
     if (pCountEl) pCountEl.textContent = this.categories.length;
@@ -70,7 +78,13 @@
 
 getProjectClasses(category = null) {
   const catKey = (category || this.currentCategory || '').toLowerCase();
-  const raw = this.classes[catKey];
+  let raw = this.classes[catKey];
+  if ((!Array.isArray(raw) || raw.length === 0) && Array.isArray(this.categories)) {
+    const catObj = this.categories.find(c => c.id && c.id.toLowerCase() === catKey);
+    if (catObj && Array.isArray(catObj.classes) && catObj.classes.length > 0) {
+      raw = catObj.classes;
+    }
+  }
   if (Array.isArray(raw) && raw.length > 0) {
     return raw;
   } else if (raw && typeof raw === 'object' && typeof raw.id === 'number') {

@@ -23,6 +23,89 @@ DEFAULT_CLASS_MAPPING = {
     "belt": {"id": 1, "name": "Belt", "color": "#10b981", "prompts": ["belt", "leather belt"]},
 }
 
+RICH_PROMPT_PRESETS: Dict[str, List[str]] = {
+    "t-shirt": ["t-shirt", "short sleeve t-shirt", "tee shirt", "cotton tee", "crew neck t-shirt"],
+    "shirt": ["shirt", "button-down shirt", "dress shirt", "collared shirt", "blouse"],
+    "sweater": ["sweater", "knit sweater", "pullover sweater", "jumper", "cardigan"],
+    "sweatshirt": ["sweatshirt", "hoodie", "pullover sweatshirt", "fleece sweatshirt"],
+    "tunic": ["tunic", "long tunic top", "tunic blouse", "loose long top"],
+    "jacket": ["jacket", "denim jacket", "leather jacket", "bomber jacket", "zip jacket"],
+    "coat": ["coat", "winter coat", "trench coat", "overcoat", "long coat"],
+    "pants": ["pants", "trousers", "jeans", "slacks", "chinos"],
+    "skirt": ["skirt", "mini skirt", "midi skirt", "pleated skirt", "long skirt"],
+    "leggings": ["leggings", "black leggings", "yoga pants", "tight pants", "tights"],
+    "shorts": ["shorts", "denim shorts", "casual shorts", "athletic shorts"],
+    "tracksuit": ["tracksuit", "jogger set", "sweatsuit", "athletic tracksuit"],
+    "dress": ["dress", "summer dress", "evening gown", "midi dress", "maxi dress"],
+    "suit": ["suit", "business suit", "blazer and trousers", "tailored suit"],
+    "sneakers": ["sneakers", "running shoes", "athletic shoes", "trainers", "canvas sneakers"],
+    "dress shoes": ["dress shoes", "oxford shoes", "loafers", "formal leather shoes", "derby shoes"],
+    "heels": ["heels", "high heels", "stiletto heels", "pumps", "heeled shoes"],
+    "boots": ["boots", "ankle boots", "leather boots", "knee-high boots", "chelsea boots"],
+    "sandals": ["sandals", "summer sandals", "strappy sandals", "open-toe sandals", "flip-flops"],
+    "flats": ["flats", "ballet flats", "women flat shoes", "slip-on flat shoes", "mary jane flats"],
+    "slippers": ["slippers", "house slippers", "slides", "mules", "fuzzy slippers"],
+    "socks": ["socks", "ankle socks", "crew socks", "cotton socks"],
+    "headscarf": ["headscarf", "hijab", "head wrap", "head scarf", "bandana"],
+    "hat": ["hat", "baseball cap", "beanie", "sun hat", "fedora hat"],
+    "glasses": ["glasses", "eyeglasses", "sunglasses", "optical frames", "reading glasses"],
+    "ring": ["ring", "finger ring", "wedding band", "gold ring", "silver ring"],
+    "bracelet": ["bracelet", "wristlet", "bangle", "chain bracelet", "wrist cuff"],
+    "earrings": ["earrings", "stud earrings", "hoop earrings", "drop earrings"],
+    "necklace": ["necklace", "pendant necklace", "chain necklace", "choker"],
+    "watch": ["watch", "wristwatch", "smartwatch", "analog watch", "luxury watch"],
+    "scarf": ["scarf", "neck scarf", "winter scarf", "silk scarf", "shawl"],
+    "gloves": ["gloves", "leather gloves", "winter gloves", "knit gloves"],
+    "belt": ["belt", "leather belt", "waist belt", "buckle belt"],
+    "tie": ["tie", "necktie", "bow tie", "silk tie"],
+    "bag": ["bag", "handbag", "shoulder bag", "tote bag", "backpack", "purse", "clutch"],
+    "person": ["person", "human", "man", "woman", "pedestrian"],
+    "car": ["car", "sedan", "suv", "automobile", "vehicle"],
+    "shoe": ["shoe", "sneaker", "boot", "sandal", "flat shoe", "heel"],
+}
+
+
+def enrich_class_prompts(class_name: str, existing_prompts: Optional[List[str]] = None) -> List[str]:
+    """Ensure every class has rich CLIP/YOLO-World visual descriptor prompts (at least 4 when possible)."""
+    cleaned: List[str] = []
+    seen = set()
+    for p in (existing_prompts or []):
+        ps = str(p).strip().lower()
+        if ps and ps not in seen:
+            cleaned.append(ps)
+            seen.add(ps)
+
+    base = str(class_name or "").strip().lower()
+    if not cleaned and base:
+        cleaned.append(base)
+        seen.add(base)
+
+    if len(cleaned) >= 3:
+        return cleaned
+
+    candidates: List[str] = []
+    if base in RICH_PROMPT_PRESETS:
+        candidates = RICH_PROMPT_PRESETS[base]
+    else:
+        for k, vals in RICH_PROMPT_PRESETS.items():
+            if base == k or f" {k}" in f" {base}" or f"{k} " in f"{base} ":
+                candidates = vals
+                break
+
+    if not candidates and base:
+        words = base.replace("_", " ").replace("-", " ").strip()
+        candidates = [words, f"{words} item", f"{words} object", f"close-up {words}"]
+
+    for cand in candidates:
+        c_norm = cand.strip().lower()
+        if c_norm and c_norm not in seen:
+            cleaned.append(c_norm)
+            seen.add(c_norm)
+            if len(cleaned) >= 6:
+                break
+
+    return cleaned
+
 MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
 MAX_BATCH_UPLOAD_COUNT = 1500
 
